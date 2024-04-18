@@ -46,14 +46,23 @@ class shop_management:
 
         # Call the insert_row method with the table name and column values
         self.ops.insert_row("ShopList", column_values)
+        operations.Operations.close_cursor_connection(
+            self.ops.cursor, self.ops.connection
+        )
 
     def remove_shop(self, shop_id, shop_name):
         condition_dict = {"ShopId": shop_id, "ShopName": shop_name}
         self.ops.remove_row("ShopList", condition_dict)
+        operations.Operations.close_cursor_connection(
+            self.ops.cursor, self.ops.connection
+        )
 
     def update_shop(self, updated_values, where_conditions):
         # 'where_conditions' is a dictionary where keys are column names and values are values to match
         self.ops.update_row("ShopList", updated_values, where_conditions)
+        operations.Operations.close_cursor_connection(
+            self.ops.cursor, self.ops.connection
+        )
 
 
 """  ====================================================== Testing Part ===============================================  """
@@ -71,7 +80,9 @@ if __name__ == "__main__":
     #    "SDF",
     # )
     # shop_management().remove_shop(12213, "SKSJOP")
-    shop_management().update_shop(
-        updated_values={"ShopName": "SKSHOP", "OwnerName": "SK"},
-        where_conditions={"Password": "password23"},
-    )
+    # shop_management().update_shop(
+    #    updated_values={"ShopName": "SKSHOP", "OwnerName": "SK"},
+    #    where_conditions={"Password": "password23"},
+    # )
+
+    print("ss")

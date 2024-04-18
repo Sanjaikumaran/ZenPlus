@@ -4,54 +4,81 @@ from database import database
 
 class Operations:
     def __init__(self):
-        # Attempt to establish a connection to the database during object initialization
+        # Attempt to establish a connection to the local database during object initialization
+        (
+            self.success_local,
+            self.connection_local,
+            self.cursor_local,
+            self.error_local,
+        ) = database.connect_to_local_db()
 
-        self.success, self.connection, self.cursor, self.error = (
-            database.connect_to_db()
-        )
+    def create_table(self, table_name, column_definitions):
+        if self.success_local:
+            try:
+                # Define the SQL query to create the table
+                create_table_query = f"CREATE TABLE {table_name} ({column_definitions})"
+
+                # Execute the query on local database
+                self.cursor_local.execute(create_table_query)
+
+                # Commit the transaction
+                self.connection_local.commit()
+
+                return "Table created successfully"
+            except sqlite3.Error as err:
+                print("Error:", err)
+
+    def delete_table(self, table_name):
+        if self.success_local:
+            try:
+                # Define the SQL query to delete the table
+                drop_table_query = f"DROP TABLE {table_name}"
+
+                # Execute the query on local database
+                self.cursor_local.execute(drop_table_query)
+
+                # Commit the transaction
+                self.connection_local.commit()
+
+                return "Table deleted successfully"
+            except sqlite3.Error as err:
+                print("Error:", err)
 
     def insert_row(self, table_name, column_values):
-        if self.success:
+        if self.success_local:
             try:
                 # Construct the INSERT query dynamically
                 insert_query = f"INSERT INTO {table_name} ("
                 insert_query += ", ".join(column_values.keys())
                 insert_query += ") VALUES ("
-                insert_query += ", ".join(["%s" for _ in column_values])
+                insert_query += ", ".join(["?" for _ in column_values])
                 insert_query += ")"
 
                 # Prepare values for the query
                 query_values = list(column_values.values())
 
-                # Execute the INSERT query with the provided data
-                self.cursor.execute(insert_query, query_values)
+                # Execute the INSERT query with the provided data on local database
+                self.cursor_local.execute(insert_query, query_values)
 
-                # Commit the changes
-                self.connection.commit()
+                # Commit the transaction
+                self.connection_local.commit()
 
                 print("Row inserted successfully.")
 
-            except mysql.connector.Error as err:
+            except sqlite3.Error as err:
                 print("Error:", err)
 
-            finally:
-                # Close cursor and connection
-                if self.cursor:
-                    self.cursor.close()
-                if self.connection:
-                    self.connection.close()
-
     def update_row(self, table_name, update_values, where_conditions):
-        if self.success:
+        if self.success_local:
             try:
                 # Construct the SET clause dynamically
                 set_clause = ", ".join(
-                    [f"{column} = %s" for column in update_values.keys()]
+                    [f"{column} = ?" for column in update_values.keys()]
                 )
 
                 # Construct the WHERE clause dynamically
                 where_clause = " AND ".join(
-                    [f"{column} = %s" for column in where_conditions.keys()]
+                    [f"{column} = ?" for column in where_conditions.keys()]
                 )
 
                 # Construct the UPDATE query dynamically
@@ -64,26 +91,20 @@ class Operations:
                     where_conditions.values()
                 )
 
-                # Execute the UPDATE query with the provided data
-                with self.connection.cursor() as cursor:
-                    cursor.execute(update_query, query_values)
+                # Execute the UPDATE query with the provided data on local database
+                self.cursor_local.execute(update_query, query_values)
 
-                # Commit the changes
-                self.connection.commit()
+                # Commit the transaction
+                self.connection_local.commit()
 
                 print(f"Rows updated successfully.")
 
-            except mysql.connector.Error as err:
+            except sqlite3.Error as err:
                 # Handle the error gracefully
                 print("Error:", err)
 
-            finally:
-                # Close connection
-                if self.connection:
-                    self.connection.close()
-
     def remove_row(self, table_name, condition_dict):
-        if self.success:
+        if self.success_local:
             try:
                 # Construct the DELETE query
                 delete_query = f"DELETE FROM {table_name}"
@@ -92,52 +113,72 @@ class Operations:
                 if condition_dict:
                     # Construct the WHERE clause based on the conditions
                     where_clause = " AND ".join(
-                        [f"{column} = %s" for column in condition_dict.keys()]
+                        [f"{column} = ?" for column in condition_dict.keys()]
                     )
                     delete_query += f" WHERE {where_clause}"
 
-                    # Execute the DELETE query with the condition values
-                    self.cursor.execute(delete_query, tuple(condition_dict.values()))
+                    # Execute the DELETE query with the condition values on local database
+                    self.cursor_local.execute(
+                        delete_query, tuple(condition_dict.values())
+                    )
 
                 else:
-                    # If no conditions provided, delete all rows
-                    self.cursor.execute(delete_query)
+                    # If no conditions provided, delete all rows on local database
+                    self.cursor_local.execute(delete_query)
 
-                # Commit the changes
-                self.connection.commit()
+                # Commit the transaction
+                self.connection_local.commit()
 
                 print("Rows deleted successfully.")
 
-            except mysql.connector.Error as err:
+            except sqlite3.Error as err:
                 print("Error:", err)
 
-            finally:
-                # Close cursor and connection
-                if self.cursor:
-                    self.cursor.close()
-                if self.connection:
-                    self.connection.close()
-
     def list_table(self, table_name, column_values):
-        # Check if the connection is successful
-        if self.success:
-            # Perform database operations using the connection and cursor
+        if self.success_local:
             try:
-                # Example: Execute SQL queries
-                self.cursor.execute(f"SELECT {column_values} FROM {table_name}")
-                rows = self.cursor.fetchall()
+                # Execute SQL query
+                self.cursor_local.execute(f"SELECT {column_values} FROM {table_name}")
+                rows = self.cursor_local.fetchall()
                 for row in rows:
                     print(row)
 
-            finally:
-                # Close the cursor and connection when done
-                if self.cursor:
-                    self.cursor.close()
-                if self.connection:
-                    self.connection.close()
-        else:
-            # Handle the case when connection fails
-            print("Database connection failed. Error:", self.error)
+            except sqlite3.Error as err:
+                print("Error:", err)
+
+    def select_row(self, table_name, columns, where_conditions):
+        if self.success_local:
+            try:
+                # Construct the WHERE clause dynamically
+                where_clause = " AND ".join(
+                    [f"{column} = ?" for column in where_conditions.keys()]
+                )
+
+                # Construct the SELECT query dynamically
+                select_query = (
+                    f"SELECT {columns} FROM {table_name} WHERE {where_clause}"
+                )
+
+                # Prepare values for the query
+                query_values = list(where_conditions.values())
+
+                # Execute the SELECT query with the provided conditions on local database
+                self.cursor_local.execute(select_query, query_values)
+                row = self.cursor_local.fetchone()
+                if row:
+                    return row
+                else:
+                    print("No matching row found.")
+
+            except sqlite3.Error as err:
+                # Handle the error gracefully
+                print("Error:", err)
+
+    def close_cursor_connection(self):
+        if self.cursor_local:
+            self.cursor_local.close()
+        if self.connection_local:
+            self.connection_local.close()
 
 
 """  ====================================================== Testing Part ===============================================  """
@@ -149,34 +190,31 @@ if __name__ == "__main__":
     ops = Operations()
     current_time = time.time()
 
-    ops.list_table("ShopList", "ShopId,Branch")
+    # Perform operations on both remote and local databases
+    ops.create_table(
+        "your_table_name", "id SERIAL PRIMARY KEY, name VARCHAR(50), age INT"
+    )
 
-    # ops.remove_row("ShopList", "Branch", "asd")
+    ops.insert_row(
+        table_name="your_table_name", column_values={"name": "John", "age": 30}
+    )
 
-    # ops.insert_row(
-    #    table_name="ShopList",
-    #    column_values={
-    #        "TimeStamp": time.strftime(
-    #            "%Y-%m-%d %H:%M:%S", time.localtime(current_time)
-    #        ),
-    #        "ShopId": "12345",
-    #        "EmailAddress": "example@example.com",
-    #        "Password": "password123",
-    #        "GSTNo": "ABCDE1234F",
-    #        "MobileNumber": "9876543210",
-    #        "ShopName": "Example Shop",
-    #        "OwnerName": "John Doe",
-    #        "Branch": "Main Branch",
-    #        "WebsiteURL": "http://example.com",
-    #        "GreetingsMessage": "Welcome to our shop!",
-    #    },
-    # )
+    ops.update_row(
+        table_name="your_table_name",
+        update_values={"age": 35},
+        where_conditions={"name": "John"},
+    )
 
-    # ops.update_row(
-    #    update_values={
-    #        "EmailAddress": "new_email@example.com",
-    #        "ShopName": "New Shop Name",
-    #    },
-    #    where_column="ShopId",
-    #    where_value="2024002141724590",
-    # )
+    ops.remove_row(table_name="your_table_name", condition_dict={"name": "John"})
+
+    ops.list_table("your_table_name", "id, name, age")
+
+    ops.select_row(
+        table_name="your_table_name",
+        columns="id, name, age",
+        where_conditions={"age": 35},
+    )
+
+    # Close connections to both databases
+    ops.close_cursor_connection(ops.cursor_remote, ops.connection_remote)
+    ops.close_cursor_connection(ops.cursor_local, ops.connection_local)

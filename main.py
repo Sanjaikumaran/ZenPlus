@@ -2,7 +2,9 @@ import tkinter as tk
 from tkinter import StringVar, OptionMenu
 import datetime
 import re  # for regular expressions
-import db  # Assuming db module exists with necessary functionalities
+from database import (
+    operations,
+)  # Assuming operations module exists with necessary functionalities
 
 
 class BasePage:
@@ -177,7 +179,7 @@ class SignUp(BasePage):
 
         current_time = datetime.datetime.now()
         userId = f"{current_time.strftime('%Y')}{usetype}{current_time.strftime('%m%d%H%M%S')}{len(username)}"
-        db.AdminControlls().AddUser(username, userId, password, usertype)
+        operations.AdminControlls().AddUser(username, userId, password, usertype)
 
 
 class LoginPage(BasePage):
@@ -206,7 +208,7 @@ class LoginPage(BasePage):
         username = self.fields["Username"].get()
         password = self.fields["Password"].get()
         try:
-            db.AdminControlls().login(username, password)
+            operations.AdminControlls().login(username, password)
         except Exception as e:
             # Handle the exception here, such as showing an error message
             print("An error occurred during login:", str(e))
