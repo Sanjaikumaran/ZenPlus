@@ -11,7 +11,7 @@ class Operations:
     def __init__(self):
         # Attempt to establish a connection to the database during object initialization
         self.success, self.connection, self.cursor, self.error = (
-            database.connect_to_db()
+            database.connect_to_remote_db()
         )
 
     @staticmethod
