@@ -160,6 +160,31 @@ class BillBookApp:
             customer_frame, textvariable=self.bill_no, font=("calibri", 15), width=25
         ).grid(row=1, column=8, padx=10)
 
+    def clear_cart(self):
+        # Clear the cart items list
+        self.cart_items.clear()
+
+        # Update the total price, taxes, and amount
+        total_price = 0
+        total_taxes = 0
+        total_amount = 0
+
+        # Update labels with calculated values
+        for child in self.master.winfo_children():
+            if child.winfo_name() == "carthead":
+                for label in child.winfo_children():
+                    if label.cget("text").startswith("Total Price"):
+                        label.config(text="Total Price : ₹ {:.2f}".format(total_price))
+                    elif label.cget("text").startswith("Total Taxes"):
+                        label.config(text="Total Taxes : ₹ {:.2f}".format(total_taxes))
+                    elif label.cget("text").startswith("Total Amount"):
+                        label.config(
+                            text="Total Amount : ₹ {:.2f}".format(total_amount)
+                        )
+
+        # Update the cart section in the GUI
+        self.create_cart_section()
+
     def remove_from_cart(self, index):
         # Remove item from cart_items list
         removed_item = self.cart_items[index]
@@ -255,33 +280,90 @@ class BillBookApp:
             fg="white",
         )
         total_amount_label.grid(row=0, column=12, columnspan=3, padx=10, pady=10)
+        # Create a frame for column titles
 
     def create_cart_section(self):
+        column_titles_frame = Frame(self.master, bg="#5C509C", name="columntitles")
+        column_titles_frame.pack(fill=X, padx=10)
+
+        # Column titles
+        column_titles = [
+            "S.No",
+            "Product",
+            "Quantity",
+            "Price",
+            "Discount",
+            "Amount",
+            "Taxes",
+            "Total",
+            "Remove",
+        ]
+        # Define the widths of each column
+        column_widths = [10, 30, 10, 15, 10, 15, 15, 15, 10]
+        column_titles_frame = Frame(self.master, bg="#5C509C", name="columntitles")
+        column_titles_frame.pack(fill=X, padx=10)
+
+        # Add column titles
+        for i, title in enumerate(column_titles):
+            # Create a frame for each column title label
+            frame = Frame(
+                column_titles_frame, width=column_widths[i], height=30, bg="white"
+            )
+            frame.grid(row=0, column=i, padx=10, pady=5, sticky="nsew")
+
+            # Create the label inside the frame
+            label = Label(
+                frame,
+                text=title,
+                font=("calibri", 15, "bold"),
+                bg="#5C509C",
+                fg="white",
+                width=column_widths[i],
+            )
+            label.pack(expand=True, fill=BOTH)
+
+            # Add vertical line to separate cells with different colors
+            if i < len(column_titles) - 1:
+                separator = Frame(column_titles_frame, width=3, bg="black")
+                separator.grid(row=0, column=i, rowspan=1, sticky="nse", padx=5)
+
+        # Resize the weights of the columns to make them expandable
+        for i in range(len(column_titles)):
+            column_titles_frame.grid_columnconfigure(i, weight=1)
+
         self.cart_frame = Frame(self.master, bg="#5C509C", name="cartframe")
         self.cart_frame.pack(fill=BOTH, expand=True, padx=10, pady=10)
 
         # Create a canvas for the scrollable area
-        cart_canvas = Canvas(self.cart_frame, bg="#5C509C")
-        cart_canvas.pack(side=LEFT, fill=BOTH, expand=True)
+        self.cart_canvas = Canvas(self.cart_frame, bg="#5C509C")
+        self.cart_canvas.pack(side=LEFT, fill=BOTH, expand=True)
 
         # Add scrollbar for the canvas
         cart_scrollbar = Scrollbar(
-            self.cart_frame, orient=VERTICAL, command=cart_canvas.yview
+            self.cart_frame, orient=VERTICAL, command=self.cart_canvas.yview
         )
         cart_scrollbar.pack(side=RIGHT, fill=Y)
 
         # Configure canvas to use the scrollbar
-        cart_canvas.config(yscrollcommand=cart_scrollbar.set)
+        self.cart_canvas.config(yscrollcommand=cart_scrollbar.set)
 
         # Create a frame to contain the item rows
-        self.cart_inner_frame = Frame(cart_canvas, bg="#5C509C")
-        cart_canvas.create_window((0, 0), window=self.cart_inner_frame, anchor="nw")
+        self.cart_inner_frame = Frame(self.cart_canvas, bg="#5C509C")
+        self.cart_canvas.create_window(
+            (0, 0), window=self.cart_inner_frame, anchor="nw"
+        )
 
         # Bind scrolling to the canvas
         def on_canvas_configure(event):
-            cart_canvas.configure(scrollregion=cart_canvas.bbox("all"))
+            self.cart_canvas.configure(scrollregion=self.cart_canvas.bbox("all"))
 
         self.cart_inner_frame.bind("<Configure>", on_canvas_configure)
+
+        # Bind mousewheel scrolling (optional)
+        def scroll(event):
+            self.cart_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+        self.cart_canvas.bind_all("<MouseWheel>", scroll)
 
     def add_to_cart(self):
         product_name = self.Product.get()
@@ -299,113 +381,63 @@ class BillBookApp:
         self.Price.set("")
         self.Discount.set("")
 
-        # Find the cart frame directly
-        cart_frame = self.master.nametowidget(".cartframe")
+        # Append the new item to cart_items
+        self.cart_items.append(
+            (
+                len(self.cart_items) + 1,
+                product_name,
+                str(quantity),
+                f"₹{price:.2f}",
+                f"₹{discount:.2f}",
+                f"₹{amount:.2f}",
+                f"₹{tax:.2f}",
+                f"₹{amount + tax:.2f}",
+            )
+        )
 
-        if cart_frame:
-            self.cart_inner_frame = cart_frame.winfo_children()[0]
+        # Update cart section
+        self.create_cart_section()
 
-            matching_item_index = None
-            for i, item in enumerate(self.cart_items):
-                if (
-                    item[1] == product_name
-                    and float(item[3][1:]) == price
-                    and float(item[4][1:]) == discount
-                ):
-                    matching_item_index = i
-                    break
+        # Update total price, taxes, and amount after adding the item
+        total_price = sum(float(item[5][1:]) for item in self.cart_items)
+        total_taxes = sum(float(item[6][1:]) for item in self.cart_items)
+        total_amount = sum(float(item[7][1:]) for item in self.cart_items)
 
-            if matching_item_index is not None:
-                matching_item = self.cart_items[matching_item_index]
-                item_quantity = int(matching_item[2])
-                updated_quantity = str(item_quantity + quantity)
-                updated_amount = f"₹{float(matching_item[5][1:]) + amount:.2f}"
-                updated_tax = f"₹{float(matching_item[6][1:]) + tax:.2f}"
-                updated_total = f"₹{float(matching_item[7][1:]) + amount + tax:.2f}"
-
-                updated_item = (
-                    matching_item[0],
-                    matching_item[1],
-                    updated_quantity,
-                    matching_item[3],
-                    matching_item[4],
-                    updated_amount,
-                    updated_tax,
-                    updated_total,
-                )
-                self.cart_items[matching_item_index] = updated_item
-            else:
-                same_item = False
-                for item in self.cart_items:
-                    if item[1] == product_name and float(item[3][1:]) == price:
-                        same_item = True
-                        break
-                if not same_item:
-                    self.cart_items.append(
-                        (
-                            len(self.cart_items) + 1,
-                            product_name,
-                            str(quantity),
-                            f"₹{price:.2f}",
-                            f"₹{discount:.2f}",
-                            f"₹{amount:.2f}",
-                            f"₹{tax:.2f}",
-                            f"₹{amount + tax:.2f}",
+        # Update labels with calculated values
+        for child in self.master.winfo_children():
+            if child.winfo_name() == "carthead":
+                for label in child.winfo_children():
+                    if label.cget("text").startswith("Total Price"):
+                        label.config(text="Total Price : ₹ {:.2f}".format(total_price))
+                    elif label.cget("text").startswith("Total Taxes"):
+                        label.config(text="Total Taxes : ₹ {:.2f}".format(total_taxes))
+                    elif label.cget("text").startswith("Total Amount"):
+                        label.config(
+                            text="Total Amount : ₹ {:.2f}".format(total_amount)
                         )
-                    )
 
-            # Update total price, taxes, and amount
-            total_price = sum(float(item[5][1:]) for item in self.cart_items)
-            total_taxes = sum(float(item[6][1:]) for item in self.cart_items)
-            total_amount = sum(float(item[7][1:]) for item in self.cart_items)
+        column_widths = [10, 30, 10, 15, 10, 15, 15, 15, 10]
+        for i, item in enumerate(self.cart_items, start=2):
+            for j, value in enumerate(item, start=1):
+                label = Label(
+                    self.cart_inner_frame,
+                    text=value,
+                    font=("calibri", 15),
+                    width=column_widths[j - 1],
+                )
+                label.grid(row=i, column=j, padx=5, pady=5)
 
-            # Update labels with calculated values
-            for child in self.master.winfo_children():
-                if child.winfo_name() == "carthead":
-                    for label in child.winfo_children():
-                        if label.cget("text").startswith("Total Price"):
-                            label.config(
-                                text="Total Price : ₹ {:.2f}".format(total_price)
-                            )
-                        elif label.cget("text").startswith("Total Taxes"):
-                            label.config(
-                                text="Total Taxes : ₹ {:.2f}".format(total_taxes)
-                            )
-                        elif label.cget("text").startswith("Total Amount"):
-                            label.config(
-                                text="Total Amount : ₹ {:.2f}".format(total_amount)
-                            )
-
-            # Clear existing widgets inside the cart inner frame
-            for widget in self.cart_inner_frame.winfo_children():
-                widget.destroy()
-
-            column_widths = [10, 30, 10, 15, 10, 15, 15, 15, 10]
-            # Add items to the cart
-            for i, item in enumerate(self.cart_items, start=2):
-                for j, value in enumerate(item, start=1):
-                    label = Label(
-                        self.cart_inner_frame,
-                        text=value,
-                        font=("calibri", 15),
-                        width=column_widths[j - 1],
-                    )
-                    label.grid(row=i, column=j, padx=5, pady=5)
-
-                    remove_button = Button(
-                        self.cart_inner_frame,
-                        text="Remove",
-                        font=("calibri", 12),
-                        bg="#FF5733",
-                        fg="white",
-                        command=lambda idx=i - 2: self.remove_from_cart(idx),
-                    )
-                    remove_button.grid(
-                        row=i, column=len(column_widths)
-                    )  # Place the button in the last column
-
-            # Update the scroll region after adding new items
-            self.cart_frame.update_idletasks()
+                remove_button = Button(
+                    self.cart_inner_frame,
+                    text="Remove",
+                    font=("calibri", 12),
+                    bg="#FF5733",
+                    fg="white",
+                    command=lambda idx=i - 2: self.remove_from_cart(idx),
+                )
+                remove_button.grid(
+                    row=i, column=len(column_widths), padx=10
+                )  # Place the button in the last column
 
     def create_item_bill_section(self):
         bill_frame = Frame(self.master, bg="#5C509C")
@@ -470,8 +502,17 @@ class BillBookApp:
             command=self.add_to_cart,
         )
         add_item_button.grid(
-            row=1, column=7, columnspan=3, rowspan=2
+            row=1, column=7, rowspan=2
         )  # Spanning two rows and three columns, move to the right
+        clear_button = Button(
+            bill_frame,
+            text="Clear Cart",
+            font=("calibri", 15),
+            bg="#FF5733",
+            fg="white",
+            command=self.clear_cart,
+        )
+        clear_button.grid(row=1, column=8, columnspan=3, rowspan=2)
 
         self.cart_head("", "", "")
         self.create_cart_section()
