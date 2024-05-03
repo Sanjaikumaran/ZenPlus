@@ -6,9 +6,16 @@ class product_management:
         # Create an instance of the Operations class 2024002141724590
         self.ops = operations.Operations()
 
+    def list_products(self):
+        return self.ops.list_table(
+            "Products",
+            "ProductName, ProductId, Brand, CostPrice, SellingPrice, MRP, Discount, CurrentStock, HistoryStock, SoldStock, GST",
+        )
+
+        # self.ops.close_cursor_connection()
+
     def add_product(
         self,
-        SNo,
         shop_id,
         brand,
         product_name,
@@ -16,6 +23,7 @@ class product_management:
         cost_price,
         selling_price,
         mrp,
+        discount,
         current_stock,
         history_stock,
         sold_stock,
@@ -23,7 +31,6 @@ class product_management:
     ):
         # Define the column values as a dictionary
         column_values = {
-            "SNo": SNo,
             "ShopId": shop_id,
             "Brand": brand,
             "ProductName": product_name,
@@ -31,6 +38,7 @@ class product_management:
             "CostPrice": cost_price,
             "SellingPrice": selling_price,
             "MRP": mrp,
+            "Discount": discount,
             "CurrentStock": current_stock,
             "HistoryStock": history_stock,
             "SoldStock": sold_stock,
@@ -38,20 +46,30 @@ class product_management:
         }
 
         # Call the insert_row method with the table name and column values
-        self.ops.insert_row("Products", column_values)
-
-        # Close connections to the local database
-        self.ops.close_cursor_connection()
+        result = self.ops.insert_row("Products", column_values)
+        if result:
+            return True
+        else:
+            return False
+        # self.ops.close_cursor_connection()
 
     def remove_product(self, shop_id, product_id):
         condition_dict = {"ShopId": shop_id, "ProductId": product_id}
-        self.ops.remove_row("Products", condition_dict)
-        self.ops.close_cursor_connection(self.ops.cursor, self.ops.connection)
+        result = self.ops.remove_row("Products", condition_dict)
+        if result:
+            return result
+        else:
+            return False
+        # self.ops.close_cursor_connection(self.ops.cursor, self.ops.connection)
 
     def update_product(self, shop_id, product_id, updated_values):
         where_conditions = {"ShopId": shop_id, "ProductId": product_id}
-        self.ops.update_row("Products", updated_values, where_conditions)
-        self.ops.close_cursor_connection(self.ops.cursor, self.ops.connection)
+        result = self.ops.update_row("Products", updated_values, where_conditions)
+        if result:
+            return True
+        else:
+            return False
+        # self.ops.close_cursor_connection(self.ops.cursor, self.ops.connection)
 
     def update_history_stock(self, shop_id, product_id, updated_value):
         # Fetch the current history stock from the database
@@ -75,7 +93,7 @@ class product_management:
             )
 
             # Close cursor and connection
-            self.ops.close_cursor_connection(self.ops.cursor, self.ops.connection)
+            # self.ops.close_cursor_connection(self.ops.cursor, self.ops.connection)
         else:
             # Handle the case where the current history stock could not be fetched
             print(
@@ -91,32 +109,32 @@ if __name__ == "__main__":
 
     # Create an instance of the product_management class
     product_manager = product_management()
-
+    # print(product_manager.list_products()[0])
     # Call the add_product function
-    product_manager.add_product(
-        SNo="2",
-        shop_id="123",
-        brand="Example Brand",
-        product_name="Example Product",
-        product_id="PROD123",
-        cost_price=10.50,
-        selling_price=15.99,
-        mrp=20.00,
-        current_stock=100,
-        history_stock=500,
-        sold_stock=400,
-        gst=5.00,
-    )
+    # product_manager.add_product(
+    #    SNo="2",
+    #    shop_id="123",
+    #    brand="Example Brand",
+    #    product_name="Example Product",
+    #    product_id="PROD123",
+    #    cost_price=10.50,
+    #    selling_price=15.99,
+    #    mrp=20.00,
+    #    current_stock=100,
+    #    history_stock=500,
+    #    sold_stock=400,
+    #    gst=5.00,
+    # )
 
     # Call the remove_product function
     # product_manager.remove_product(shop_id="123456", product_id="PROD123")
 
-    ## Call the update_product function
-    # product_manager.update_product(
-    #    shop_id="1234756",
-    #    product_id="PROD123",
-    #    updated_values={"ProductName": "New Product Name", "CostPrice": 12.50},
-    # )
+    # Call the update_product function
+    product_manager.update_product(
+        shop_id="123",
+        product_id="PROD123",
+        updated_values={"ProductName": "New Product Name", "CostPrice": 12.560},
+    )
 
     # product_manager.update_history_stock(
     #    shop_id="1234756",

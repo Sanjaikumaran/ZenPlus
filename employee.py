@@ -10,8 +10,16 @@ class EmployeeManagement:
         # Get current timestamp
         self.current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
+    def list_employees(self):
+
+        return self.ops.list_table(
+            "Employees",
+            "EmployeeID, ShopId, FirstName, LastName, Department, Position, Salary, HireDate",
+        )
+
     # Method to add a new employee
     def add_employee(self, employee_data):
+
         # Call insert_row method to add employee record
         self.ops.insert_row("Employees", employee_data)
 
