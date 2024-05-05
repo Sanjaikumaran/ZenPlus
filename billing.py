@@ -1,5 +1,6 @@
 from tkinter import *
 import sqlite3
+from products_ui import ProductManagementApp
 
 
 class DataListFrame(Frame):
@@ -84,29 +85,114 @@ class BillBookApp:
         self.create_item_bill_section()
 
     def create_menu(self):
+        menu_items = [
+            (
+                "File",
+                [
+                    ("New", None),
+                    ("Sync to Remote Database", None),
+                    ("Sync to Local Database", None),
+                    ("Open", None),
+                    ("Exit", self.master.quit),
+                ],
+            ),
+            (
+                "Products",
+                [
+                    ("Show Product List", self.show_product_list),
+                    ("Find Product", self.open_product_management_ui),
+                    ("Add Product", self.add_product),
+                    ("Edit Product", self.edit_product),
+                    ("Remove Product", self.remove_product),
+                ],
+            ),
+            (
+                "Employee",
+                [
+                    ("Show Employee List", self.show_employee_list),
+                    ("Find Employee", self.find_employee),
+                    ("Add Employee", self.add_employee),
+                    ("Edit Employee", self.edit_employee),
+                    ("Remove Employee", self.remove_employee),
+                ],
+            ),
+            (
+                "Report",
+                [
+                    ("Daily Sales", self.daily_sales),
+                    ("Gross Sales", self.gross_sales),
+                    ("Shop-Wise", self.shop_wise),
+                    ("Summary", self.summary),
+                ],
+            ),
+        ]
+
         menu = Menu(self.master)
         self.master.config(menu=menu)
-
-        file_menu = Menu(menu)
-        menu.add_cascade(label="File", menu=file_menu)
-        file_menu.add_command(label="New")
-        file_menu.add_command(label="Open")
-        file_menu.add_command(label="Open")
-        file_menu.add_command(label="Open")
-        file_menu.add_separator()
-        file_menu.add_command(label="Exit", command=self.master.quit)
-
-        menu_items = [
-            ("Sales", ["Daily Sales", "Gross Sales", "Shop-Wise", "Summary"]),
-            ("Stock", ["Daily Sales", "Gross Sales", "Shop-Wise", "Summary"]),
-            ("Report", ["Daily Sales", "Gross Sales", "Shop-Wise", "Summary"]),
-        ]
 
         for label, items in menu_items:
             submenu = Menu(menu)
             menu.add_cascade(label=label, menu=submenu)
-            for item in items:
-                submenu.add_command(label=item)
+            for item_label, command in items:
+                submenu.add_command(label=item_label, command=command)
+
+    def open_product_management_ui(self):
+        # Create a Toplevel window for the product management UI
+        self.product_management_window = Toplevel(self.master)
+        # Instantiate the ProductManagementApp class in the Toplevel window
+        self.product_management_app = ProductManagementApp(
+            self.product_management_window
+        )
+        # Bind a callback to handle closing of the product management UI
+        self.product_management_window.protocol(
+            "WM_DELETE_WINDOW", self.close_product_management_ui
+        )
+
+    def close_product_management_ui(self):
+        # Destroy the product management UI Toplevel window
+        self.product_management_window.destroy()
+
+    def show_product_list(self):
+        print("Show Product List")
+
+    def find_product(self):
+        print("Find Product")
+
+    def add_product(self):
+        print("Add Product")
+
+    def edit_product(self):
+        print("Edit Product")
+
+    def remove_product(self):
+        print("Remove Product")
+
+    def show_employee_list(self):
+        print("Show Employee List")
+
+    def find_employee(self):
+        print("Find Employee")
+
+    def add_employee(self):
+        print("Add Employee")
+
+    def edit_employee(self):
+        print("Edit Employee")
+
+    def remove_employee(self):
+        print("Remove Employee")
+
+    def daily_sales(self):
+        print("Daily Sales")
+
+    def gross_sales(self):
+        print("Gross Sales")
+
+    def shop_wise(self):
+        print("Shop-Wise")
+
+    def summary(self):
+        print("Summary")
 
     def create_customer_frame(self):
         customer_frame = Frame(self.master, bg="#A080E1")

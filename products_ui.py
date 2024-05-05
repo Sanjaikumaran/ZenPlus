@@ -1,5 +1,5 @@
 from tkinter import *
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, font as tkFont
 from database import database
 from products import product_management
 
@@ -79,6 +79,8 @@ class ProductManagementApp:
 
         for col in self.columns:
             self.tree.heading(col, text=col)
+        for col in self.columns:
+            self.tree.column(col, width=tkFont.Font().measure(col))
 
         self.original_data = self.product_manager.list_products()
         self.insert_data_into_treeview(self.original_data)

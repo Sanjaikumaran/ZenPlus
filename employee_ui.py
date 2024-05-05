@@ -284,21 +284,9 @@ class EmployeeManagementApp:
 class MultiColumnListbox(ttk.Treeview):
     def __init__(self, master=None, **kw):
         super().__init__(master, **kw)
-        self._columns = None
-        self.tag_configure("button", foreground="blue", font=("Arial", 10, "underline"))
-        self.tag_bind("button", "<ButtonRelease-1>", self.button_click)
-
-    def button_click(self, event):
-        item = self.identify("item", event.x, event.y)
-        column = self.identify_column(event.x)
-        if column == "#13":
-            self.event_generate("<<EditButtonClicked>>", when="tail")
-        elif column == "#14":
-            self.event_generate("<<RemoveButtonClicked>>", when="tail")
 
     def insert(self, parent, index, *args, **kwargs):
         super().insert(parent, index, *args, **kwargs)
-        self.tag_configure("button", foreground="blue", font=("Arial", 10, "underline"))
 
 
 if __name__ == "__main__":

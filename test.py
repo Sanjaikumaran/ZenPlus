@@ -1,37 +1,37 @@
 from tkinter import *
-from tkinter import ttk, messagebox
-from database import database  # Assuming you have a database module
-from employee import EmployeeManagement
-import random
-
-# Assuming you have an employees module
+from tkinter import ttk, messagebox, font as tkFont
+from database import database
+from products import product_management
 
 
-class EmployeeManagementApp:
+class ProductManagementApp:
     columns = (
-        "SNo",
-        "Employee ID",
-        "Shop ID",
-        "First Name",
-        "Last Name",
-        "Department",
-        "Position",
-        "Salary",
-        "Hire Date",
+        "Sno",
+        "Product Name",
+        "Product ID",
+        "Brand",
+        "Cost Price",
+        "Selling Price",
+        "MRP",
+        "Discount",
+        "Current Stock",
+        "History Stock",
+        "Sold Stock",
+        "GST",
     )
 
     def __init__(self, master):
         self.master = master
-        self.master.title("Employee Management")
+        self.master.title("Product Management")
         self.master.config(bg="#382D72")
         self.master.attributes("-zoomed", True)
-        self.employee_manager = EmployeeManagement()
+        self.product_manager = product_management()
         self.create_search_frame()
         self.create_table_frame()
         self.master.bind("<Alt-s>", lambda event: self.search_entry.focus())
-        self.master.bind("<Alt-n>", lambda event: self.add_new_employee())
-        self.master.bind("<Delete>", lambda event: self.remove_employee())
-        self.master.bind("<Alt-e>", lambda event: self.edit_employee())
+        self.master.bind("<Alt-n>", lambda event: self.add_new_product())
+        self.master.bind("<Delete>", lambda event: self.remove_product())
+        self.master.bind("<Alt-e>", lambda event: self.edit_product())
         self.master.bind("<Escape>", lambda event: self.close_windows_except_master)
 
     def close_windows_except_master(self):
@@ -51,16 +51,16 @@ class EmployeeManagementApp:
 
         self.search_entry = Entry(self.search_frame, bg="white", width=30)
         self.search_entry.pack(side=LEFT, padx=(5, 0), fill="x", expand=True)
-        self.search_entry.bind("<KeyRelease>", self.search_employee)
+        self.search_entry.bind("<KeyRelease>", self.search_product)
 
         self.add_button = Button(
-            self.search_frame, text="Add New", command=self.add_new_employee
+            self.search_frame, text="Add New", command=self.add_new_product
         )
         self.edit_button = Button(
-            self.search_frame, text="Edit ", command=self.edit_employee
+            self.search_frame, text="Edit ", command=self.edit_product
         )
         self.remove_button = Button(
-            self.search_frame, text="Remove ", command=self.remove_employee
+            self.search_frame, text="Remove ", command=self.remove_product
         )
 
         self.remove_button.pack(side=RIGHT, padx=(5, 0))
@@ -79,8 +79,10 @@ class EmployeeManagementApp:
 
         for col in self.columns:
             self.tree.heading(col, text=col)
+        for col in self.columns:
+            self.tree.column(col, width=tkFont.Font().measure(col))
 
-        self.original_data = self.employee_manager.list_employees()
+        self.original_data = self.product_manager.list_products()
         self.insert_data_into_treeview(self.original_data)
 
         for col in self.columns:
@@ -111,7 +113,7 @@ class EmployeeManagementApp:
         for index, (val, child) in enumerate(sorted_values):
             self.tree.move(child, "", index)
 
-    def search_employee(self, event=None):
+    def search_product(self, event=None):
         query = self.search_entry.get().lower()
         if query:
             self.tree.delete(*self.tree.get_children())
@@ -125,20 +127,14 @@ class EmployeeManagementApp:
             self.tree.delete(*self.tree.get_children())
             self.insert_data_into_treeview(self.original_data)
 
-    def add_new_employee(self, event=None):
+    def add_new_product(self, event=None):
         self.add_window = Toplevel(self.master)
-        self.add_window.title("Add New Employee")
-        self.add_window.bind("<Control-s>", lambda event: self.save_new_employee())
-        self.add_window.bind("<Return>", lambda event: self.save_new_employee())
+        self.add_window.title("Add New Product")
+        self.add_window.bind("<Control-s>", lambda event: self.save_new_product())
+        self.add_window.bind("<Return>", lambda event: self.save_new_product())
 
-        # Exclude Employee ID and Shop ID from the labels
-        self.labels = self.columns[3:]
+        self.labels = self.columns[1:]
         self.entries = []
-        # Set Shop ID as 123 (not visible)
-        shop_id_entry = Entry(self.add_window, state="readonly")
-        shop_id_entry.grid(row=len(self.labels), column=1, padx=10, pady=5)
-        shop_id_entry.insert(0, "123")
-
         for i, label in enumerate(self.labels):
             Label(self.add_window, text=label).grid(row=i, column=0, padx=10, pady=5)
             entry = Entry(self.add_window)
@@ -146,50 +142,63 @@ class EmployeeManagementApp:
             self.entries.append(entry)
 
         save_button = Button(
-            self.add_window, text="Save", command=self.save_new_employee
+            self.add_window, text="Save", command=self.save_new_product
         )
-        save_button.grid(row=len(self.labels) + 1, columnspan=2, padx=10, pady=10)
+        save_button.grid(row=len(self.labels), columnspan=2, padx=10, pady=10)
 
-    def save_new_employee(self):
-        # Get data from entry widgets and construct a dictionary
-        employee_data = {}
-        for label, entry in zip(self.labels, self.entries):
-            # Remove spaces from column names
-            column_name = label.replace(" ", "")
-            employee_data[column_name] = entry.get()
-
-        # Generate a random employee ID not in the table
-        while True:
-            employee_id = random.randint(10000, 99999)
-            if not self.employee_manager.get_employee(employee_id):
-                break
-        employee_data["EmployeeID"] = employee_id
-        employee_data["ShopID"] = "123"
-
-        # Assuming employee_manager has a method for adding new employees
-        if self.employee_manager.add_employee(employee_data):
-            self.tree.delete(*self.tree.get_children())
-            self.original_data = self.employee_manager.list_employees()
-            for i, row in enumerate(self.original_data, start=1):
-                self.tree.insert("", "end", values=(i,) + row)
-            self.add_window.destroy()
-            messagebox.showinfo("Success", "Employee Added")
+    def save_new_product(self):
+        product_name = self.entries[0].get()
+        product_id = self.entries[1].get()
+        brand = self.entries[2].get()
+        cost_price = self.entries[3].get()
+        selling_price = self.entries[4].get()
+        mrp = self.entries[5].get()
+        discount = self.entries[6].get()
+        current_stock = self.entries[7].get()
+        history_stock = self.entries[8].get()
+        sold_stock = self.entries[9].get()
+        gst = self.entries[10].get()
+        shop_id = "123"
+        product_exists = any(product_id == row[1] for row in self.original_data)
+        if product_exists:
+            messagebox.showerror("Error", "Product ID already exists.")
         else:
-            self.add_window.destroy()
-            messagebox.showerror("Error", "Employee cannot be added.")
+            if self.product_manager.add_product(
+                shop_id,
+                brand,
+                product_name,
+                product_id,
+                cost_price,
+                selling_price,
+                mrp,
+                discount,
+                current_stock,
+                history_stock,
+                sold_stock,
+                gst,
+            ):
+                self.tree.delete(*self.tree.get_children())
+                self.original_data = self.product_manager.list_products()
+                for i, row in enumerate(self.original_data, start=1):
+                    self.tree.insert("", "end", values=(i,) + row)
+                self.add_window.destroy()
+                messagebox.showinfo("Success", "Product Added")
+            else:
+                self.add_window.destroy()
+                messagebox.showerror("Error", "Product cannot be added.")
 
-    def edit_employee(self, event=None):
+    def edit_product(self, event=None):
         selected_items = self.tree.selection()
         if len(selected_items) != 1:
             messagebox.showinfo(
-                "Edit Employee", "Please select exactly one employee to edit."
+                "Edit Product", "Please select exactly one product to edit."
             )
             return
         selected_item = selected_items[0]
         if selected_item:
             selected_item_values = self.tree.item(selected_item, "values")
             self.edit_window = Toplevel(self.master)
-            self.edit_window.title("Edit Employee")
+            self.edit_window.title("Edit Product")
             self.edit_window.bind(
                 "<Control-s>", lambda event: self.save_changes(selected_item)
             )
@@ -198,19 +207,12 @@ class EmployeeManagementApp:
             )
 
             self.edit_window_entries = []
-            for i, column in enumerate(
-                self.columns[1:], start=1
-            ):  # Exclude SNo and Employee ID
-                if column == "Shop ID":
-                    # Keep Shop ID hidden and unchanged
-                    entry = Entry(self.edit_window, state="readonly")
+            for i, column in enumerate(self.columns):
+                if column in ("Sno", "Product ID"):
+                    entry = Entry(self.edit_window)
                     entry.insert(0, selected_item_values[i])
                     self.edit_window_entries.append(entry)
-                elif column == "Employee ID":
-                    # Keep Employee ID unchanged
-                    entry = Entry(self.edit_window, state="readonly")
-                    entry.insert(0, selected_item_values[i])
-                    self.edit_window_entries.append(entry)
+                    entry.grid_forget()
                 else:
                     Label(self.edit_window, text=f"{column}:").grid(
                         row=i, column=0, padx=10, pady=5, sticky="e"
@@ -227,62 +229,58 @@ class EmployeeManagementApp:
             )
             save_button.grid(row=len(self.columns), columnspan=2, padx=10, pady=10)
         else:
-            messagebox.showinfo("Edit Employee", "Please select an employee to edit.")
+            messagebox.showinfo("Edit Product", "Please select a product to edit.")
 
     def save_changes(self, selected_item):
-        print(self.edit_window_entries)
         sno_value = self.tree.item(selected_item, "values")[0]
-        employee_id_value = self.tree.item(selected_item, "values")[1]
-        shop_id_value = self.tree.item(selected_item, "values")[2]
+        product_id_value = self.tree.item(selected_item, "values")[2]
         updated_values = {}
         for i, entry in enumerate(self.edit_window_entries):
-            if self.columns[i + 1] in ["Employee ID", "Shop ID"]:
-
-                continue  # Skip Sno, Employee ID, and Shop ID
-            column_name = self.columns[
-                i + 1
-            ]  # Get column name directly without replacing spaces
-            column_name = column_name.replace(" ", "")
-            updated_values[column_name] = entry.get()
-        print(updated_values)
-
-        # Pass updated_values as a dictionary, not a tuple
-        if self.employee_manager.update_employee(employee_id_value, updated_values):
-            new_values = (sno_value, employee_id_value, shop_id_value) + tuple(
-                updated_values.values()
-            )
-            self.tree.item(selected_item, values=new_values)
-            self.edit_window.destroy()
-            messagebox.showinfo("Success", "Employee Updated")
+            if i == 0:
+                continue
+            elif i == 2:
+                updated_values[self.columns[i]] = entry.get()
+                continue
+            else:
+                updated_values[self.columns[i]] = entry.get()
+        shop_id = "123"
+        modified_values = {}
+        for key, value in updated_values.items():
+            modified_values[key.replace(" ", "")] = value
+        new_values = [sno_value] + list(updated_values.values())
+        self.tree.item(selected_item, values=new_values)
+        self.edit_window.destroy()
+        if self.product_manager.update_product(
+            shop_id, product_id_value, modified_values
+        ):
+            messagebox.showinfo("Success", "Product Updated")
         else:
-            messagebox.showerror("Error", "Employee Cannot be Updated")
+            messagebox.showerror("Error", "Product Cannot be Updated")
 
-    def remove_employee(self, event=None):
+    def remove_product(self, event=None):
         selected_items = self.tree.selection()
         if selected_items:
-            selected_employee_ids = [
-                self.tree.item(item, "values")[1] for item in selected_items
+            selected_product_ids = [
+                self.tree.item(item, "values")[2] for item in selected_items
             ]
             confirmation_message = (
-                f"Are you sure you want to remove the following employees?\n\n"
+                f"Are you sure you want to remove the following products?\n\n"
             )
-            confirmation_message += "\n".join(selected_employee_ids)
+            confirmation_message += "\n".join(selected_product_ids)
             if messagebox.askyesno("Confirm Removal", confirmation_message):
                 for item in selected_items:
                     try:
                         self.tree.delete(item)
                     except tk.TclError:
                         pass
-                for employee_id in selected_employee_ids:
-                    self.employee_manager.remove_employee(employee_id)
+                for product_id in selected_product_ids:
+                    self.product_manager.remove_product("123", product_id)
                 if not self.tree.get_children():
                     messagebox.showinfo(
-                        "All Rows Deleted", "All employees have been removed."
+                        "All Rows Deleted", "All products have been removed."
                     )
         else:
-            messagebox.showinfo(
-                "Remove Employee", "Please select an employee to remove."
-            )
+            messagebox.showinfo("Remove Product", "Please select a product to remove.")
 
 
 class MultiColumnListbox(ttk.Treeview):
@@ -307,5 +305,5 @@ class MultiColumnListbox(ttk.Treeview):
 
 if __name__ == "__main__":
     root = Tk()
-    app = EmployeeManagementApp(root)
+    app = ProductManagementApp(root)
     root.mainloop()
