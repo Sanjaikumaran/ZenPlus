@@ -68,7 +68,7 @@ def delete_duplicate_rows(table_name, unique_column):
 
 # Call the function to list data
 
-for _ in ["Products", "Customers", "Employees", "SalesStatistics"]:
+for _ in ["Products", "Customers", "Employees", "Transactions", "TransactionItems"]:
     # delete_duplicate_rows(_, "SNo")
     list_data_from_sqlite(_)
     print("avlodha\n")

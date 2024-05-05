@@ -1,6 +1,9 @@
 from tkinter import *
 import sqlite3
 from products_ui import ProductManagementApp
+import random
+from tkinter import ttk, messagebox, font as tkFont
+from transactions import sales_stats_management
 
 
 class DataListFrame(Frame):
@@ -66,6 +69,7 @@ class BillBookApp:
         self.master.config(bg="#382D72")
         self.master.attributes("-zoomed", True)
         self.data_frame = None
+        self.sales_manager = sales_stats_management()
 
         self.name = StringVar()
         self.ph_no = StringVar()
@@ -485,21 +489,25 @@ class BillBookApp:
         self.create_cart_section()
 
         # Update total price, taxes, and amount after adding the item
-        total_price = sum(float(item[5][1:]) for item in self.cart_items)
-        total_taxes = sum(float(item[6][1:]) for item in self.cart_items)
-        total_amount = sum(float(item[7][1:]) for item in self.cart_items)
+        self.total_price = sum(float(item[5][1:]) for item in self.cart_items)
+        self.total_taxes = sum(float(item[6][1:]) for item in self.cart_items)
+        self.total_amount = sum(float(item[7][1:]) for item in self.cart_items)
 
         # Update labels with calculated values
         for child in self.master.winfo_children():
             if child.winfo_name() == "carthead":
                 for label in child.winfo_children():
                     if label.cget("text").startswith("Total Price"):
-                        label.config(text="Total Price : ₹ {:.2f}".format(total_price))
+                        label.config(
+                            text="Total Price : ₹ {:.2f}".format(self.total_price)
+                        )
                     elif label.cget("text").startswith("Total Taxes"):
-                        label.config(text="Total Taxes : ₹ {:.2f}".format(total_taxes))
+                        label.config(
+                            text="Total Taxes : ₹ {:.2f}".format(self.total_taxes)
+                        )
                     elif label.cget("text").startswith("Total Amount"):
                         label.config(
-                            text="Total Amount : ₹ {:.2f}".format(total_amount)
+                            text="Total Amount : ₹ {:.2f}".format(self.total_amount)
                         )
 
         column_widths = [10, 30, 10, 15, 10, 15, 15, 15, 10]
@@ -586,9 +594,10 @@ class BillBookApp:
             bg="#FF5733",
             fg="white",
             command=self.add_to_cart,
+            padx=20,
         )
         add_item_button.grid(
-            row=1, column=7, rowspan=2
+            row=1, column=7, padx=30, rowspan=2
         )  # Spanning two rows and three columns, move to the right
         clear_button = Button(
             bill_frame,
@@ -597,11 +606,72 @@ class BillBookApp:
             bg="#FF5733",
             fg="white",
             command=self.clear_cart,
+            padx=20,
         )
-        clear_button.grid(row=1, column=8, columnspan=3, rowspan=2)
+        clear_button.grid(row=1, column=8, padx=30, rowspan=2)
+        print_button = Button(
+            bill_frame,
+            text="Print",
+            font=("calibri", 15),
+            bg="#FF5733",
+            fg="white",
+            command=self.print,
+            padx=20,
+        )
+        print_button.grid(
+            row=1,
+            column=10,
+            rowspan=2,
+            padx=30,
+        )
 
         self.cart_head("", "", "")
         self.create_cart_section()
+
+    def print(self):
+        # Generate a unique transaction ID
+        while True:
+            transaction_id = random.randint(10000, 99999)
+            if not self.sales_manager.get_transaction(transaction_id):
+                break
+
+        # Calculate total quantity and total discount
+        total_quantity = sum(int(item[2]) for item in self.cart_items)
+        total_discount = sum(float(item[4][1:]) for item in self.cart_items)
+        total_price = sum(float(item[3][1:]) for item in self.cart_items)
+
+        # Get customer ID, payment method, and employee ID from the GUI variables
+        customer_id = 4567  # self.ph_no.get()  # Assuming this is the customer ID
+        payment_method = "Cash"  # Assuming payment method is hardcoded to Cash
+        employee_id = (
+            "sk0311"  # self.emp_name.get()  # Assuming this is the employee ID
+        )
+        profit = 21212121
+        locationid = 890
+        # Prepare transaction data
+        transaction_data = {
+            "TransactionID": str(transaction_id),
+            "ShopID": "123",  # Assuming ShopID is hardcoded
+            "Quantity": total_quantity,
+            "Discount": total_discount,
+            "CustomerID": customer_id,
+            "TotalPrice": total_price,
+            "Tax": self.total_taxes,
+            "Profit": profit,
+            "NetSales": self.total_amount,
+            "PaymentMethod": payment_method,
+            "EmployeeID": employee_id,
+            "LocationID": locationid,
+            # Include other transaction details as needed
+        }
+
+        # Assuming sales_manager has a method for adding new transactions
+        if self.sales_manager.add_transaction(transaction_data):
+            # Update GUI or perform other actions upon successful addition
+            messagebox.showinfo("Success", "Transaction Added")
+        else:
+            # Handle failure to add transaction
+            messagebox.showerror("Error", "Transaction cannot be added.")
 
     def check_matching_data(self, event):
 

@@ -64,6 +64,7 @@ class Operations:
             return False
 
     def update_row(self, table_name, update_values, where_conditions):
+
         try:
             # Construct the SET clause dynamically
             set_clause = ", ".join([f"{column} = ?" for column in update_values.keys()])
@@ -124,6 +125,7 @@ class Operations:
     def list_table(self, table_name, column_values):
         try:
             # Execute SQL query
+
             self.cursor_local.execute(f"SELECT {column_values} FROM {table_name}")
             rows = self.cursor_local.fetchall()
 
@@ -172,30 +174,45 @@ if __name__ == "__main__":
     # Create an instance of the Operations class
     ops = Operations()
 
-    # Perform operations on local database
-    ops.create_table(
-        "your_table_name", "id INTEGER PRIMARY KEY, name TEXT, age INTEGER"
+    ## Perform operations on local database
+    # ops.create_table(
+    #    "your_table_name", "id INTEGER PRIMARY KEY, name TEXT, age INTEGER"
+    # )
+
+    # ops.insert_row(
+    #    table_name="your_table_name", column_values={"name": "John", "age": 30}
+    # )
+
+    # ops.update_row(
+    #    table_name="your_table_name",
+    #    update_values={"age": 35},
+    #    where_conditions={"name": "John"},
+    # )
+
+    # ops.remove_row(table_name="your_table_name", condition_dict={"name": "John"})
+
+    ops.list_table(
+        "Transactions",
+        "SNo",
+        "Timestamp",
+        "TransactionID",
+        "Quantity",
+        "TotalPrice",
+        "CustomerID",
+        "PaymentMethod",
+        "Discount",
+        "Tax",
+        "NetSales",
+        "Profit",
+        "EmployeeID",
+        "LocationID",
     )
 
-    ops.insert_row(
-        table_name="your_table_name", column_values={"name": "John", "age": 30}
-    )
-
-    ops.update_row(
-        table_name="your_table_name",
-        update_values={"age": 35},
-        where_conditions={"name": "John"},
-    )
-
-    ops.remove_row(table_name="your_table_name", condition_dict={"name": "John"})
-
-    ops.list_table("your_table_name", "id, name, age")
-
-    ops.select_row(
-        table_name="your_table_name",
-        columns="id, name, age",
-        where_conditions={"age": 35},
-    )
+    # ops.select_row(
+    #    table_name="your_table_name",
+    #    columns="id, name, age",
+    #    where_conditions={"age": 35},
+    # )
 
     # Close connections to the local database
     ops.close_cursor_connection()
