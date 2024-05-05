@@ -151,7 +151,7 @@ class Operations:
             if row:
                 return row
             else:
-                print("No matching row found.")
+                return False
 
         except sqlite3.Error as err:
             # Handle the error gracefully

@@ -17,11 +17,25 @@ class EmployeeManagement:
             "EmployeeID, ShopId, FirstName, LastName, Department, Position, Salary, HireDate",
         )
 
+    def get_employee(self, employee_id):
+
+        # Define the columns you want to retrieve
+        columns = "*"
+
+        # Define the conditions to filter the employee
+        where_conditions = {"EmployeeID": employee_id}
+
+        # Execute the SELECT query to get the employee
+        return self.ops.select_row("Employees", columns, where_conditions)
+
     # Method to add a new employee
     def add_employee(self, employee_data):
 
         # Call insert_row method to add employee record
-        self.ops.insert_row("Employees", employee_data)
+        if self.ops.insert_row("Employees", employee_data):
+            return True
+        else:
+            return False
 
     # Method to update an employee record
     def update_employee(self, employee_id, updated_values):
@@ -29,7 +43,10 @@ class EmployeeManagement:
         where_conditions = {"EmployeeID": employee_id}
 
         # Call update_row method to update employee record
-        self.ops.update_row("Employees", updated_values, where_conditions)
+        if self.ops.update_row("Employees", updated_values, where_conditions):
+            return True
+        else:
+            return False
 
     # Method to remove an employee record
     def remove_employee(self, employee_id):
@@ -37,7 +54,10 @@ class EmployeeManagement:
         where_conditions = {"EmployeeID": employee_id}
 
         # Call remove_row method to remove employee record
-        self.ops.remove_row("Employees", where_conditions)
+        if self.ops.remove_row("Employees", where_conditions):
+            return True
+        else:
+            return False
 
     # Additional methods for employee-related operations can be defined here
 
