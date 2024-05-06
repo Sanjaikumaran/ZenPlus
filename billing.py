@@ -4,15 +4,23 @@ from products_ui import ProductManagementApp
 import random
 from tkinter import ttk, messagebox, font as tkFont
 from transactions import sales_stats_management
+from customers import CustomerManagement
+from transactionItems import TransactionItemManagement
+
+
+import time
 
 
 class DataListFrame(Frame):
-    def __init__(self, master, product_var, quantity_var, price_var, discount_var):
+    def __init__(
+        self, master, product_var, quantity_var, price_var, discount_var, product_id_var
+    ):
         super().__init__(master)
         self.product_var = product_var
         self.price_var = price_var
         self.discount_var = discount_var
         self.quantity_var = quantity_var
+        self.product_id_var = product_id_var  # Assign product_id_var
         self.listbox_created = False
 
     def createBox(self):
@@ -45,7 +53,9 @@ class DataListFrame(Frame):
         if self.listbox_created:
             self.data_list.delete(0, END)
             for item in data:
-                formatted_item = f"{item[3]}, {item[2]}, ₹ {item[6]}, {item[5]}"
+                formatted_item = (
+                    f"{item[4]}, {item[3]}, {item[2]}, ₹ {item[6]}, {item[5]}"
+                )
                 self.data_list.insert(END, formatted_item)
             self.data_list.config(height=10)
 
@@ -55,14 +65,27 @@ class DataListFrame(Frame):
         if selected_index:
             selected_item_str = self.data_list.get(selected_index)
             selected_item_list = selected_item_str.split(", ")
-            self.product_var.set(selected_item_list[0])
-            self.price_var.set(selected_item_list[2])
-            self.discount_var.set(str.strip(selected_item_list[3]) + " %")
+            self.product_id_var = selected_item_list[0]
+            self.product_var.set(selected_item_list[1])
+            self.price_var.set(selected_item_list[3])
+            self.discount_var.set(str.strip(selected_item_list[4]) + " %")
             self.quantity_var.set(1)
             self.destroy()
 
 
 class BillBookApp:
+    columns = [
+        "SNo",
+        "Customer ID",
+        "First Name",
+        "Last Name",
+        "Email",
+        "Phone",
+        "Address",
+        "City",
+        "Country",
+    ]
+
     def __init__(self, master):
         self.master = master
         self.master.title("Bill Book")
@@ -70,6 +93,8 @@ class BillBookApp:
         self.master.attributes("-zoomed", True)
         self.data_frame = None
         self.sales_manager = sales_stats_management()
+        self.customer_manager = CustomerManagement()
+        self.transaction_items_manager = TransactionItemManagement()
 
         self.name = StringVar()
         self.ph_no = StringVar()
@@ -81,12 +106,16 @@ class BillBookApp:
         self.Discount = StringVar()
         self.Amount = StringVar()
         self.Price = StringVar()
+        self.product_id_var = None
 
         self.cart_items = []
 
         self.create_menu()
         self.create_customer_frame()
         self.create_item_bill_section()
+        self.master.bind("<Control-p>", lambda event: self.add_new_customer())
+        self.master.bind("<Escape>", lambda event: self.clear_cart())
+        self.master.bind("<Return>", lambda event: self.add_to_cart())
 
     def create_menu(self):
         menu_items = [
@@ -201,54 +230,52 @@ class BillBookApp:
     def create_customer_frame(self):
         customer_frame = Frame(self.master, bg="#A080E1")
         customer_frame.pack(side=TOP, fill=X, padx=10, pady=10)
+
+        # Configure column weights to center the content
+        for i in range(6):
+            customer_frame.columnconfigure(i, weight=1)
+
         title = Label(
             customer_frame,
-            text="Sales Bill",
-            font=("calibri", 20, "bold"),
+            text="Zen Plus",
+            font=("calibri", 50, "bold"),
             bg="#A080E1",
             fg="white",
         )
-        title.grid(row=0, columnspan=2, padx=10, pady=10)
+        title.grid(row=0, column=3, pady=20, sticky="e")
 
+        # Your existing customer details entry fields
         Label(
             customer_frame, text="Name", font=("calibri", 15), bg="#A080E1", fg="white"
-        ).grid(row=1, column=1)
-        Entry(
-            customer_frame, textvariable=self.name, font=("calibri", 15), width=25
-        ).grid(row=1, column=2, pady=20, padx=10)
-
-        Label(
-            customer_frame,
-            text="Employee",
-            font=("calibri", 15),
-            bg="#A080E1",
-            fg="white",
-        ).grid(row=1, column=5)
-        Entry(
-            customer_frame, textvariable=self.emp_name, font=("calibri", 15), width=25
-        ).grid(row=1, column=6, padx=10)
-
-        Label(
-            customer_frame,
-            text="Mobile Number",
-            font=("calibri", 15),
-            bg="#A080E1",
-            fg="white",
-        ).grid(row=1, column=3)
-        Entry(
-            customer_frame, textvariable=self.ph_no, font=("calibri", 15), width=25
-        ).grid(row=1, column=4, padx=10)
-
+        ).grid(row=1, column=1, padx=10, sticky="e")
+        Entry(customer_frame, font=("calibri", 15), width=25).grid(
+            row=1, column=2, pady=20, padx=10, sticky="w"
+        )
         Label(
             customer_frame,
             text="Bill No.",
             font=("calibri", 15),
             bg="#A080E1",
             fg="white",
-        ).grid(row=1, column=7)
-        Entry(
-            customer_frame, textvariable=self.bill_no, font=("calibri", 15), width=25
-        ).grid(row=1, column=8, padx=10)
+        ).grid(row=1, column=3, padx=10, sticky="e")
+        Entry(customer_frame, font=("calibri", 15), width=25).grid(
+            row=1, column=4, pady=20, padx=10, sticky="w"
+        )
+
+        # Add a label for the clock
+        self.clock_label = Label(
+            customer_frame, text="", font=("calibri", 15), bg="#A080E1", fg="white"
+        )
+        self.clock_label.grid(row=1, column=5, padx=10, sticky="e")
+
+        # Update the clock periodically
+        self.update_clock()
+
+    def update_clock(self):
+        current_datetime = time.strftime("%Y-%m-%d %H:%M:%S")
+        self.clock_label.config(text=current_datetime)
+        # Update every second (1000 milliseconds)
+        self.master.after(1000, self.update_clock)
 
     def clear_cart(self):
         # Clear the cart items list
@@ -378,8 +405,8 @@ class BillBookApp:
 
         # Column titles
         column_titles = [
-            "S.No",
-            "Product",
+            "Product ID",
+            "Product Name",
             "Quantity",
             "Price",
             "Discount",
@@ -389,7 +416,7 @@ class BillBookApp:
             "Remove",
         ]
         # Define the widths of each column
-        column_widths = [10, 30, 10, 15, 10, 15, 15, 15, 10]
+        column_widths = [15, 30, 10, 10, 10, 15, 15, 15, 10]
         column_titles_frame = Frame(self.master, bg="#5C509C", name="columntitles")
         column_titles_frame.pack(fill=X, padx=10)
 
@@ -456,12 +483,14 @@ class BillBookApp:
         self.cart_canvas.bind_all("<MouseWheel>", scroll)
 
     def add_to_cart(self):
+
         product_name = self.Product.get()
         quantity = int(self.Quantity.get())
         price = float(self.Price.get()[1:])
         original_discount = float(self.Discount.get()[:-2])
         discount = (price * original_discount / 100) * quantity
         amount = float(quantity) * price
+        self.product_id_var = self.data_frame.product_id_var
 
         gst = 0.18
         tax = amount * gst
@@ -474,7 +503,7 @@ class BillBookApp:
         # Append the new item to cart_items
         self.cart_items.append(
             (
-                len(self.cart_items) + 1,
+                self.product_id_var,
                 product_name,
                 str(quantity),
                 f"₹{price:.2f}",
@@ -510,7 +539,8 @@ class BillBookApp:
                             text="Total Amount : ₹ {:.2f}".format(self.total_amount)
                         )
 
-        column_widths = [10, 30, 10, 15, 10, 15, 15, 15, 10]
+        column_widths = [15, 30, 10, 10, 10, 15, 15, 15, 10]
+
         for i, item in enumerate(self.cart_items, start=2):
             for j, value in enumerate(item, start=1):
                 label = Label(
@@ -615,7 +645,7 @@ class BillBookApp:
             font=("calibri", 15),
             bg="#FF5733",
             fg="white",
-            command=self.print,
+            command=self.add_new_customer,
             padx=20,
         )
         print_button.grid(
@@ -628,50 +658,175 @@ class BillBookApp:
         self.cart_head("", "", "")
         self.create_cart_section()
 
-    def print(self):
-        # Generate a unique transaction ID
-        while True:
-            transaction_id = random.randint(10000, 99999)
-            if not self.sales_manager.get_transaction(transaction_id):
-                break
+    def add_new_customer(self, event=None):
+        self.add_window = Toplevel(self.master)
+        self.add_window.title("Add New customer")
+        self.add_window.bind("<Control-s>", lambda event: self.save_new_customer())
+        self.add_window.bind("<Return>", lambda event: self.save_new_customer())
 
-        # Calculate total quantity and total discount
-        total_quantity = sum(int(item[2]) for item in self.cart_items)
-        total_discount = sum(float(item[4][1:]) for item in self.cart_items)
-        total_price = sum(float(item[3][1:]) for item in self.cart_items)
+        # Exclude trsave_new_customer ID and Shop ID from the labels
+        self.labels = self.columns[2:]
+        self.entries = []
 
-        # Get customer ID, payment method, and employee ID from the GUI variables
-        customer_id = 4567  # self.ph_no.get()  # Assuming this is the customer ID
-        payment_method = "Cash"  # Assuming payment method is hardcoded to Cash
-        employee_id = (
-            "sk0311"  # self.emp_name.get()  # Assuming this is the employee ID
+        for i, label in enumerate(self.labels):
+            Label(self.add_window, text=label).grid(row=i, column=0, padx=10, pady=5)
+            entry = Entry(self.add_window)
+            entry.grid(row=i, column=1, padx=10, pady=5)
+            self.entries.append(entry)
+        options = ["Cash", "Card", "UPI"]
+        Label(self.add_window, text="Payment Method").grid(
+            row=i + 1, column=0, padx=10, pady=5
         )
-        profit = 21212121
-        locationid = 890
-        # Prepare transaction data
-        transaction_data = {
-            "TransactionID": str(transaction_id),
-            "ShopID": "123",  # Assuming ShopID is hardcoded
-            "Quantity": total_quantity,
-            "Discount": total_discount,
-            "CustomerID": customer_id,
-            "TotalPrice": total_price,
-            "Tax": self.total_taxes,
-            "Profit": profit,
-            "NetSales": self.total_amount,
-            "PaymentMethod": payment_method,
-            "EmployeeID": employee_id,
-            "LocationID": locationid,
-            # Include other transaction details as needed
-        }
+        # Create a variable to store the selected option
+        self.selected_option = StringVar(self.add_window)
+        self.selected_option.set(options[0])  # Set the default selected option
 
-        # Assuming sales_manager has a method for adding new transactions
-        if self.sales_manager.add_transaction(transaction_data):
-            # Update GUI or perform other actions upon successful addition
-            messagebox.showinfo("Success", "Transaction Added")
+        # Create the dropdown menu
+        self.dropdown = OptionMenu(self.add_window, self.selected_option, *options)
+        self.dropdown.grid(row=i + 1, column=1, padx=10, pady=5)
+
+        save_button = Button(
+            self.add_window, text="Save", command=self.save_new_customer
+        )
+        save_button.grid(row=len(self.labels) + 1, columnspan=2, padx=10, pady=10)
+
+    def save_new_customer(self):
+        # Get data from entry widgets and construct a dictionary
+        self.customer_data = {}
+        for label, entry in zip(self.labels, self.entries):
+            # Remove spaces from column names
+            column_name = label.replace(" ", "")
+            self.customer_data[column_name] = entry.get()
+
+        # Generate a random customer ID not in the table
+        while True:
+            customer_id = random.randint(10000, 99999)
+            if not self.customer_manager.get_customer(customer_id):
+                break
+        self.original_data = self.customer_manager.list_customers()
+
+        self.customer_data["SNo"] = len(self.original_data) + 1
+        self.customer_data["customerID"] = str(customer_id)
+        self.customer_data["ShopID"] = "123"
+
+        # Assuming customer_manager has a method for adding new customers
+        if self.customer_manager.add_customer(self.customer_data):
+
+            self.original_data = self.customer_manager.list_customers()
+
+            self.add_window.destroy()
+            self.return_value = True
+            self.print_transaction()
+
         else:
-            # Handle failure to add transaction
-            messagebox.showerror("Error", "Transaction cannot be added.")
+            self.return_value = False
+
+            messagebox.showerror("Error", "customer cannot be added.")
+            self.add_window.destroy()
+
+    def print_transaction(self):
+
+        if self.return_value:
+
+            # Generate a unique transaction ID
+            while True:
+                transaction_id = random.randint(10000, 99999)
+                if not self.sales_manager.get_transaction(transaction_id):
+                    break
+
+            # Get customer ID, payment method, and employee ID from the GUI variables
+            customer_id = self.customer_data[
+                "Phone"
+            ]  # self.ph_no.get()  # Assuming this is the customer ID
+            payment_method = self.selected_option.get()
+            employee_id = (
+                "sk0311"  # self.emp_name.get()  # Assuming this is the employee ID
+            )
+            profit = 21212121
+            locationid = 890
+
+            # Initialize variables for total quantity and total discount
+            total_quantity = 0
+            total_discount = 0
+
+            # Prepare a list to hold transaction item data
+            transaction_item_list = []
+
+            # Iterate over each item in the cart and prepare transaction item data
+            for cart_item in self.cart_items:
+                (
+                    product_id,
+                    product_name,
+                    quantity,
+                    price,
+                    discount,
+                    amount,
+                    tax,
+                    total,
+                ) = cart_item
+
+                # Increment total quantity and total discount
+                total_quantity += int(quantity)
+                total_discount += float(discount[1:])
+
+                # Prepare transaction item data
+                transaction_item_data = {
+                    "TransactionID": str(transaction_id),
+                    "ShopId": "123",  # Assuming ShopID is hardcoded
+                    "ProductID": product_id,  # Assuming ProductID is hardcoded or retrieved from the database
+                    "Quantity": int(quantity),
+                    "Price": float(price[1:]),
+                    "Discount": float(discount[1:]),
+                    "Amount": float(amount[1:]),
+                    "Taxes": float(tax[1:]),
+                    "Total": float(total[1:]),
+                    # Include other transaction item details as needed
+                }
+
+                # Add transaction item data to the list
+                transaction_item_list.append(transaction_item_data)
+            items_added = 0
+            # Assuming there's a method to insert transaction items into the database
+            for transaction_item_data in transaction_item_list:
+                if self.transaction_items_manager.add_transaction_item(
+                    transaction_item_data
+                ):
+                    items_added += 1
+                    continue  # Successfully added transaction item
+                else:
+                    messagebox.showerror("Error", "Transaction item cannot be added.")
+                    return
+
+            # Prepare transaction data
+
+            if items_added == len(transaction_item_list):
+                transaction_data = {
+                    "TransactionID": str(transaction_id),
+                    "ShopId": "123",  # Assuming ShopID is hardcoded
+                    "CustomerID": customer_id,
+                    "Quantity": total_quantity,
+                    "Discount": total_discount,
+                    "TotalPrice": self.total_price,
+                    "Tax": self.total_taxes,
+                    "Profit": profit,
+                    "NetSales": self.total_amount,
+                    "PaymentMethod": payment_method,
+                    "EmployeeID": employee_id,
+                    "LocationID": locationid,
+                    # Include other transaction details as needed
+                }
+                # Assuming sales_manager has a method for adding new transactions
+                if self.sales_manager.add_transaction(transaction_data):
+                    # Update GUI or perform other actions upon successful addition
+                    messagebox.showinfo("Success", "Printed")
+                    self.clear_cart()
+            else:
+                # Handle failure to add transaction
+                messagebox.showerror("Error", "Cannot Print")
+
+        else:
+            # Handle failure to add transaction items
+            messagebox.showerror("Error", "Transaction items cannot be added.")
 
     def check_matching_data(self, event):
 
@@ -692,7 +847,12 @@ class BillBookApp:
             if self.data_frame is None or not self.data_frame.winfo_exists():
                 # Create a new DataListFrame
                 self.data_frame = DataListFrame(
-                    self.master, self.Product, self.Quantity, self.Price, self.Discount
+                    self.master,
+                    self.Product,
+                    self.Quantity,
+                    self.Price,
+                    self.Discount,
+                    self.product_id_var,
                 )
                 self.data_frame.pack(pady=10)
 

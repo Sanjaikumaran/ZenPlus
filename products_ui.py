@@ -32,13 +32,6 @@ class ProductManagementApp:
         self.master.bind("<Alt-n>", lambda event: self.add_new_product())
         self.master.bind("<Delete>", lambda event: self.remove_product())
         self.master.bind("<Alt-e>", lambda event: self.edit_product())
-        self.master.bind("<Escape>", lambda event: self.close_windows_except_master)
-
-    def close_windows_except_master(self):
-        # Destroy all Toplevel windows except the master window
-        for window in self.master.winfo_children():
-            if isinstance(window, Toplevel):
-                window.destroy()
 
     def create_search_frame(self):
         self.search_frame = Frame(self.master, bg="#382D72")
@@ -132,6 +125,7 @@ class ProductManagementApp:
         self.add_window.title("Add New Product")
         self.add_window.bind("<Control-s>", lambda event: self.save_new_product())
         self.add_window.bind("<Return>", lambda event: self.save_new_product())
+        self.add_window.bind("<Escape>", lambda event: self.add_window.destroy())
 
         self.labels = self.columns[1:]
         self.entries = []
