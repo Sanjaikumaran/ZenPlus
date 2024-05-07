@@ -86,11 +86,12 @@ class BillBookApp:
         "Country",
     ]
 
-    def __init__(self, master):
+    def __init__(self, master, window):
         self.master = master
-        self.master.title("Bill Book")
+        self.window = window
+        self.window.title("Bill Book")
         self.master.config(bg="#382D72")
-        self.master.attributes("-zoomed", True)
+        # self.master.attributes("-zoomed", True)
         self.data_frame = None
         self.sales_manager = sales_stats_management()
         self.customer_manager = CustomerManagement()
@@ -110,122 +111,12 @@ class BillBookApp:
 
         self.cart_items = []
 
-        self.create_menu()
+        # self.create_menu()
         self.create_customer_frame()
         self.create_item_bill_section()
         self.master.bind("<Control-p>", lambda event: self.add_new_customer())
         self.master.bind("<Escape>", lambda event: self.clear_cart())
         self.master.bind("<Return>", lambda event: self.add_to_cart())
-
-    def create_menu(self):
-        menu_items = [
-            (
-                "File",
-                [
-                    ("New", None),
-                    ("Sync to Remote Database", None),
-                    ("Sync to Local Database", None),
-                    ("Open", None),
-                    ("Exit", self.master.quit),
-                ],
-            ),
-            (
-                "Products",
-                [
-                    ("Show Product List", self.show_product_list),
-                    ("Find Product", self.open_product_management_ui),
-                    ("Add Product", self.add_product),
-                    ("Edit Product", self.edit_product),
-                    ("Remove Product", self.remove_product),
-                ],
-            ),
-            (
-                "Employee",
-                [
-                    ("Show Employee List", self.show_employee_list),
-                    ("Find Employee", self.find_employee),
-                    ("Add Employee", self.add_employee),
-                    ("Edit Employee", self.edit_employee),
-                    ("Remove Employee", self.remove_employee),
-                ],
-            ),
-            (
-                "Report",
-                [
-                    ("Daily Sales", self.daily_sales),
-                    ("Gross Sales", self.gross_sales),
-                    ("Shop-Wise", self.shop_wise),
-                    ("Summary", self.summary),
-                ],
-            ),
-        ]
-
-        menu = Menu(self.master)
-        self.master.config(menu=menu)
-
-        for label, items in menu_items:
-            submenu = Menu(menu)
-            menu.add_cascade(label=label, menu=submenu)
-            for item_label, command in items:
-                submenu.add_command(label=item_label, command=command)
-
-    def open_product_management_ui(self):
-        # Create a Toplevel window for the product management UI
-        self.product_management_window = Toplevel(self.master)
-        # Instantiate the ProductManagementApp class in the Toplevel window
-        self.product_management_app = ProductManagementApp(
-            self.product_management_window
-        )
-        # Bind a callback to handle closing of the product management UI
-        self.product_management_window.protocol(
-            "WM_DELETE_WINDOW", self.close_product_management_ui
-        )
-
-    def close_product_management_ui(self):
-        # Destroy the product management UI Toplevel window
-        self.product_management_window.destroy()
-
-    def show_product_list(self):
-        print("Show Product List")
-
-    def find_product(self):
-        print("Find Product")
-
-    def add_product(self):
-        print("Add Product")
-
-    def edit_product(self):
-        print("Edit Product")
-
-    def remove_product(self):
-        print("Remove Product")
-
-    def show_employee_list(self):
-        print("Show Employee List")
-
-    def find_employee(self):
-        print("Find Employee")
-
-    def add_employee(self):
-        print("Add Employee")
-
-    def edit_employee(self):
-        print("Edit Employee")
-
-    def remove_employee(self):
-        print("Remove Employee")
-
-    def daily_sales(self):
-        print("Daily Sales")
-
-    def gross_sales(self):
-        print("Gross Sales")
-
-    def shop_wise(self):
-        print("Shop-Wise")
-
-    def summary(self):
-        print("Summary")
 
     def create_customer_frame(self):
         customer_frame = Frame(self.master, bg="#A080E1")
@@ -859,7 +750,7 @@ class BillBookApp:
                 # Position the tooltip frame below the entry
                 x, y, _, _ = self.product_name_entry.bbox("insert")
 
-                self.data_frame.place(x=10, y=215)
+                self.data_frame.place(x=10, y=280)
 
             if not self.data_frame.listbox_created:
                 self.data_frame.createBox()
@@ -870,6 +761,11 @@ class BillBookApp:
 
     def item_selected(self):
         pass
+
+    def destroy(self):
+        # Destroy all children of the master widget
+        for child in self.master.winfo_children():
+            child.destroy()
 
 
 if __name__ == "__main__":

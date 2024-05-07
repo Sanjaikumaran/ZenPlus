@@ -18,11 +18,10 @@ class customerManagementApp:
         "Country",
     ]
 
-    def __init__(self, master):
+    def __init__(self, master, window):
         self.master = master
-        self.master.title("Customer Details")
-        self.master.config(bg="#382D72")
-        self.master.attributes("-zoomed", True)
+        self.window = window
+        self.window.title("Product Management")
         self.customer_manager = CustomerManagement()
         self.create_search_frame()
         self.create_table_frame()

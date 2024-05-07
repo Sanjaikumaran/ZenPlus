@@ -2,17 +2,17 @@ import tkinter as tk
 from tkinter import ttk
 from database import database
 import time
+from tkinter import messagebox
+from log_in import Login
 
 
-class BillBookApp:
-    success_remote, cnx_remote, cursor_remote, error_remote = (
-        database.connect_to_remote_db()
-    )
+class SignUp:
 
-    def __init__(self, root):
-
+    def __init__(self, root, callback):
         self.root = root
-        self.root.title("Bill Book")
+
+        self.callback = callback
+        self.root.title("Sign Up")
         self.root.config(bg="#382D72")
         self.root.attributes("-zoomed", True)
         current_time = time.time()
@@ -31,7 +31,7 @@ class BillBookApp:
         title_frame.pack(side=tk.TOP, fill=tk.X)
         title = tk.Label(
             title_frame,
-            text="Welcome To Bill Sheet",
+            text="Welcome To Zen Plus",
             font=("calibri", 45, "bold"),
             bg="#382D72",
             fg="white",
@@ -87,17 +87,17 @@ class BillBookApp:
         )
         btn_signup.grid(row=len(labels), column=0, padx=10, pady=10)
 
-        btn_exit = tk.Button(
+        btn_login = tk.Button(
             signup_frame,
-            command=self.exit,
-            text="Exit",
+            command=self.destroy,
+            text="Login",
             bg="#E5CCF4",
             padx=10,
             pady=10,
             font=("calibri", 15, "bold"),
             width=10,
         )
-        btn_exit.grid(row=len(labels), column=1, padx=10, pady=10)
+        btn_login.grid(row=len(labels), column=1, padx=10, pady=10)
 
     def signup(self):
         # Retrieve data from entry fields
@@ -121,10 +121,10 @@ class BillBookApp:
         # Connect to remote database
 
         # If connection is successful, proceed with inserting data
-        if self.success_remote:
+        if self.root.success_remote:
             # Define the SQL query to insert data into the table
             insert_query = """
-            INSERT INTO ShopList (TimeStamp, ShopId, EmailAddress, Password, GSTNo, MobileNumber, ShopName, OwnerName, Branch, WebsiteURL, GreetingsMessage)
+            INSERT INTO ShopList (TimeStamp, ShopID, EmailAddress, Password, GSTNo, MobileNumber, ShopName, OwnerName, Branch, WebsiteURL, GreetingsMessage)
             VALUES (%s, %s,%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
 
@@ -145,28 +145,30 @@ class BillBookApp:
 
             try:
                 # Execute the insert query
-                self.cursor_remote.execute(insert_query, data)
+                self.root.cursor_remote.execute(insert_query, data)
 
                 # Commit changes to the database
-                self.cnx_remote.commit()
+                self.root.cnx_remote.commit()
 
-                print("Data inserted successfully.")
+                messagebox.showinfo("Success", "Successfully Registered.")
+                self.destroy()
             except Exception as e:
                 # Handle any errors that may occur during insertion
-                print("Error:", e)
-                self.cnx_remote.rollback()
+                messagebox.showinfo("Success", e)
+
+            # self.cnx_remote.rollback()
         else:
-            print("Failed to connect to remote database.")
+            messagebox.showinfo("Failed", "No internet connection.")
 
-        # Close the database connection
-        self.cursor_remote.close()
-        self.cnx_remote.close()
+    def destroy(self):
+        # Destroy all the children widgets of the root window
+        for widget in self.root.winfo_children():
+            widget.destroy()
 
-    def exit(self):
-        self.root.destroy()
+        self.callback(None)
 
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = BillBookApp(root)
+    app = SignUp(root)
     root.mainloop()

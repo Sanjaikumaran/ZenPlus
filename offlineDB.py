@@ -33,7 +33,7 @@ class Operations:
 
             # Fetch data
             self.cursor.execute(
-                f"SELECT * FROM {table_name} WHERE ShopId = %s", (shop_id,)
+                f"SELECT * FROM {table_name} WHERE ShopID = %s", (shop_id,)
             )
             table_data = self.cursor.fetchall()
 
@@ -133,11 +133,11 @@ class Operations:
         local_conn.commit()
         local_conn.close()
 
-    def main(self):
+    def main(self, shop_id):
         table_info = {
             "Customers": {"CustomerID"},
-            "Employees": {"EmployeeId"},  # Assuming EmployeeID is the unique column
-            "Products": {"ProductId"},  # Assuming ProductID is the unique column
+            "Employees": {"EmployeeID"},  # Assuming EmployeeID is the unique column
+            "Products": {"ProductID"},  # Assuming ProductID is the unique column
             "Transactions": {
                 "TransactionID"
             },  # Assuming TransactionID is the unique column
@@ -146,8 +146,6 @@ class Operations:
                 "ProductID",
             },  # Assuming ItemID is the unique column
         }  # Dictionary containing table names and unique columns
-
-        shop_id = "123"  # Replace with the shop ID you're interested in
 
         if self.check_internet_connection():
             data = self.fetch_schema_and_data_from_remote_db(table_info, shop_id)

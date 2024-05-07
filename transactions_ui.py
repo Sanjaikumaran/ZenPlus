@@ -22,11 +22,10 @@ class transactionManagementApp:
         "Location ID",
     ]
 
-    def __init__(self, master):
+    def __init__(self, master, window):
         self.master = master
-        self.master.title("Sales Statistics")
-        self.master.config(bg="#382D72")
-        self.master.attributes("-zoomed", True)
+        self.window = window
+        self.window.title("Product Management")
         self.sales_manager = sales_stats_management()
         self.create_search_frame()
         self.create_table_frame()

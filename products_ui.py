@@ -20,11 +20,10 @@ class ProductManagementApp:
         "GST",
     )
 
-    def __init__(self, master):
+    def __init__(self, master, window):
         self.master = master
-        self.master.title("Product Management")
-        self.master.config(bg="#382D72")
-        self.master.attributes("-zoomed", True)
+        self.window = window
+        self.window.title("Product Management")
         self.product_manager = product_management()
         self.create_search_frame()
         self.create_table_frame()
@@ -275,6 +274,11 @@ class ProductManagementApp:
                     )
         else:
             messagebox.showinfo("Remove Product", "Please select a product to remove.")
+
+    def destroy(self):
+        # Destroy all children of the master widget
+        for child in self.master.winfo_children():
+            child.destroy()
 
 
 class MultiColumnListbox(ttk.Treeview):

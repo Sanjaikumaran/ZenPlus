@@ -5,7 +5,7 @@ import random
 from transactionItems import TransactionItemManagement
 
 
-class transactionManagementApp:
+class transactionItemsManagementApp:
     columns = [
         "SNo",
         "Transaction ID",
@@ -18,11 +18,10 @@ class transactionManagementApp:
         "Total",
     ]
 
-    def __init__(self, master):
+    def __init__(self, master, window):
         self.master = master
-        self.master.title("Transaction Items")
-        self.master.config(bg="#382D72")
-        self.master.attributes("-zoomed", True)
+        self.window = window
+        self.window.title("Product Management")
         self.transaction_items_manager = TransactionItemManagement()
         self.create_search_frame()
         self.create_table_frame()
@@ -303,5 +302,5 @@ class MultiColumnListbox(ttk.Treeview):
 
 if __name__ == "__main__":
     root = Tk()
-    app = transactionManagementApp(root)
+    app = transactionItemsManagementApp(root)
     root.mainloop()
