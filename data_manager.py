@@ -2,33 +2,118 @@ from tkinter import *
 from tkinter import ttk, messagebox, font as tkFont
 from database import database
 import random
-from transactionItems import TransactionItemManagement
+from operations_access import DataManagement
+
+# from products import product_management
 
 
-class transactionItemsManagementApp:
-    columns = [
-        "SNo",
-        "Transaction ID",
-        "Product ID",
-        "Quantity",
-        "Price",
-        "Discount",
-        "Amount",
-        "Taxes",
-        "Total",
-    ]
+class DataManager:
 
-    def __init__(self, master, window):
+    def __init__(self, master, window, page):
         self.master = master
         self.window = window
-        self.window.title("Product Management")
-        self.transaction_items_manager = TransactionItemManagement()
+        self.manager = DataManagement()
+        if page == "Products":
+            self.window.title("Product Management")
+            self.conditions_cols = '"SNo","Product ID"'
+            self.list_columns = "ProductName, ProductId, Brand, CostPrice, SellingPrice, MRP, Discount, CurrentStock, HistoryStock, SoldStock, GST"
+            self.list_table_name = "Products"
+            self.remove_cols = [2]
+            self.columns = (
+                "SNo",
+                "Product Name",
+                "Product ID",
+                "Brand",
+                "Cost Price",
+                "Selling Price",
+                "MRP",
+                "Discount",
+                "Current Stock",
+                "History Stock",
+                "Sold Stock",
+                "GST",
+            )
+        elif page == "TransactionItems":
+            self.window.title("Transaction Items Management")
+            self.conditions_cols = "SNo"
+            self.remove_cols = [1, 2]
+            self.list_columns = " TransactionID, ProductID, Quantity, Price, Discount, Amount, Taxes, Total"
+            self.list_table_name = "TransactionItems"
+            self.columns = [
+                "SNo",
+                "Transaction ID",
+                "Product ID",
+                "Quantity",
+                "Price",
+                "Discount",
+                "Amount",
+                "Taxes",
+                "Total",
+            ]
+        elif page == "Customers":
+            self.window.title("Customers Management")
+            self.conditions_cols = '"SNo", "Customer ID", "Timestamp"'
+            self.remove_cols = [1, 2]
+            self.list_columns = (
+                "CustomerID,FirstName,LastName,Email,Phone,Address,City,Country"
+            )
+            self.list_table_name = "Customers"
+            self.columns = [
+                "SNo",
+                "Customer ID",
+                "First Name",
+                "Last Name",
+                "Email",
+                "Phone",
+                "Address",
+                "City",
+                "Country",
+            ]
+        elif page == "Employees":
+            self.window.title("Customers Management")
+            self.conditions_cols = '"SNo", "Customer ID", "Timestamp"'
+            self.remove_cols = [1, 2]
+            self.list_columns = "EmployeeID, ShopId, FirstName, LastName, Department, Position, Salary, HireDate"
+            self.list_table_name = "Employees"
+            self.columns = [
+                "SNo",
+                "Employee ID",
+                "Shop ID",
+                "First Name",
+                "Last Name",
+                "Department",
+                "Position",
+                "Salary",
+                "Hire Date",
+            ]
+        elif page == "Transactions":
+            self.window.title("Customers Management")
+            self.conditions_cols = '"SNo", "Transaction ID", "Timestamp"'
+            self.remove_cols = [1]
+            self.list_columns = "TransactionID,Timestamp,Quantity,TotalPrice,CustomerID,PaymentMethod,Discount,Tax,NetSales,Profit,EmployeeID,LocationID"
+            self.list_table_name = "Transactions"
+            self.columns = [
+                "SNo",
+                "Transaction ID",
+                "Timestamp",
+                "Quantity",
+                "Total Price",
+                "Customer ID",
+                "Payment Method",
+                "Discount",
+                "Tax",
+                "Net Sales",
+                "Profit",
+                "Employee ID",
+                "Location ID",
+            ]
+
         self.create_search_frame()
         self.create_table_frame()
         self.master.bind("<Alt-s>", lambda event: self.search_entry.focus())
-        self.master.bind("<Alt-n>", lambda event: self.add_new_transaction_items())
-        self.master.bind("<Delete>", lambda event: self.remove_transaction_items())
-        self.master.bind("<Alt-e>", lambda event: self.edit_transaction_items())
+        self.master.bind("<Alt-n>", lambda event: self.add_new())
+        self.master.bind("<Delete>", lambda event: self.remove())
+        self.master.bind("<Alt-e>", lambda event: self.edit())
         self.master.bind("<Escape>", lambda event: self.close_windows_except_master)
 
     def close_windows_except_master(self):
@@ -48,16 +133,14 @@ class transactionItemsManagementApp:
 
         self.search_entry = Entry(self.search_frame, bg="white", width=30)
         self.search_entry.pack(side=LEFT, padx=(5, 0), fill="x", expand=True)
-        self.search_entry.bind("<KeyRelease>", self.search_transaction_items)
+        self.search_entry.bind("<KeyRelease>", self.search_items)
 
         self.add_button = Button(
-            self.search_frame, text="Add New", command=self.add_new_transaction_items
+            self.search_frame, text="Add New", command=self.add_new
         )
-        self.edit_button = Button(
-            self.search_frame, text="Edit ", command=self.edit_transaction_items
-        )
+        self.edit_button = Button(self.search_frame, text="Edit ", command=self.edit)
         self.remove_button = Button(
-            self.search_frame, text="Remove ", command=self.remove_transaction_items
+            self.search_frame, text="Remove ", command=self.remove
         )
 
         self.remove_button.pack(side=RIGHT, padx=(5, 0))
@@ -79,7 +162,9 @@ class transactionItemsManagementApp:
         for col in self.columns:
             self.tree.column(col, width=tkFont.Font().measure(col))
 
-        self.original_data = self.transaction_items_manager.list_transaction_items()
+        self.original_data = self.manager.list_items(
+            self.list_table_name, self.list_columns
+        )
 
         self.insert_data_into_treeview(self.original_data)
 
@@ -111,7 +196,8 @@ class transactionItemsManagementApp:
         for index, (val, child) in enumerate(sorted_values):
             self.tree.move(child, "", index)
 
-    def search_transaction_items(self, event=None):
+    def search_items(self, event=None):
+        self.search_entry.focus()
         query = self.search_entry.get().lower()
         if query:
             self.tree.delete(*self.tree.get_children())
@@ -125,13 +211,13 @@ class transactionItemsManagementApp:
             self.tree.delete(*self.tree.get_children())
             self.insert_data_into_treeview(self.original_data)
 
-    def add_new_transaction_items(self, event=None):
+    def add_new(self, event=None):
         self.add_window = Toplevel(self.master)
         self.add_window.title("Add New Transaction")
-        self.add_window.bind("<Control-s>", lambda event: self.save_new_transaction())
-        self.add_window.bind("<Return>", lambda event: self.save_new_transaction())
+        self.add_window.bind("<Control-s>", lambda event: self.save_new())
+        self.add_window.bind("<Return>", lambda event: self.save_new())
 
-        # Exclude trsave_new_transaction ID and Shop ID from the labels
+        # Exclude trsave_new ID and Shop ID from the labels
         self.labels = self.columns[1:]
         self.entries = []
 
@@ -141,12 +227,10 @@ class transactionItemsManagementApp:
             entry.grid(row=i, column=1, padx=10, pady=5)
             self.entries.append(entry)
 
-        save_button = Button(
-            self.add_window, text="Save", command=self.save_new_transaction
-        )
+        save_button = Button(self.add_window, text="Save", command=self.save_new)
         save_button.grid(row=len(self.labels) + 1, columnspan=2, padx=10, pady=10)
 
-    def save_new_transaction(self):
+    def save_new(self):
         # Get data from entry widgets and construct a dictionary
         transaction_data = {}
         for label, entry in zip(self.labels, self.entries):
@@ -160,10 +244,12 @@ class transactionItemsManagementApp:
 
         transaction_data["ShopID"] = "123"
 
-        # Assuming transaction_items_manager has a method for adding new transactions
-        if self.transaction_items_manager.add_transaction_item(transaction_data):
+        # Assuming manager has a method for adding new transactions
+        if self.manager.add_item(self.list_table_name, transaction_data):
             self.tree.delete(*self.tree.get_children())
-            self.original_data = self.transaction_items_manager.list_transaction_items()
+            self.original_data = self.manager.list_items(
+                self.list_table_name, self.list_columns
+            )
             for i, row in enumerate(self.original_data, start=1):
                 self.tree.insert("", "end", values=(i,) + row)
             self.add_window.destroy()
@@ -172,7 +258,7 @@ class transactionItemsManagementApp:
             self.add_window.destroy()
             messagebox.showerror("Error", "Transaction cannot be added.")
 
-    def edit_transaction_items(self, event=None):
+    def edit(self, event=None):
         selected_items = self.tree.selection()
         if len(selected_items) != 1:
             messagebox.showinfo(
@@ -193,7 +279,7 @@ class transactionItemsManagementApp:
 
             self.edit_window_entries = []
             for i, column in enumerate(self.columns):
-                if column in ("SNo"):
+                if column in (self.conditions_cols):
                     entry = Entry(self.edit_window)
                     entry.insert(0, selected_item_values[i])
                     self.edit_window_entries.append(entry)
@@ -220,8 +306,10 @@ class transactionItemsManagementApp:
 
     def save_changes(self, selected_item):
         sno_value = self.tree.item(selected_item, "values")[0]
-        transaction_id_value = self.tree.item(selected_item, "values")[1]
-        product_id_value = self.tree.item(selected_item, "values")[2]
+        default_values = {
+            self.columns[i].replace(" ", ""): self.tree.item(selected_item, "values")[i]
+            for i in self.remove_cols
+        }
 
         updated_values = {}
         for i, entry in enumerate(self.edit_window_entries):
@@ -240,36 +328,73 @@ class transactionItemsManagementApp:
         self.tree.item(selected_item, values=new_values)
         self.edit_window.destroy()
 
-        if self.transaction_items_manager.update_transaction_item(
-            transaction_id_value, product_id_value, modified_values
+        if self.manager.update_item(
+            self.list_table_name, default_values, modified_values
         ):
             messagebox.showinfo("Success", "Transaction Updated")
         else:
             messagebox.showerror("Error", "Transaction Cannot be Updated")
 
-    def remove_transaction_items(self, event=None):
+    def remove(self, event=None):
         selected_items = self.tree.selection()
 
         if selected_items:
+            # Extract transaction ids with labels
             selected_transaction_ids = [
-                (self.tree.item(item, "values")[1], self.tree.item(item, "values")[2])
+                {
+                    self.columns[i].replace(" ", ""): self.tree.item(item, "values")[i]
+                    for i in self.remove_cols
+                }
                 for item in selected_items
             ]
 
+            # Create confirmation message
             confirmation_message = (
-                f"Are you sure you want to remove the following transactions?\n\n"
+                "Are you sure you want to remove the following transactions?\n\n"
             )
-            confirmation_message += "\n".join(map(str, selected_transaction_ids))
+            confirmation_message += "\n".join(
+                str(transaction_id) for transaction_id in selected_transaction_ids
+            )
+
+            # Confirm removal with user
             if messagebox.askyesno("Confirm Removal", confirmation_message):
+                # Attempt to delete each selected item from the tree
                 for item in selected_items:
                     try:
                         self.tree.delete(item)
-                    except tk.TclError:
-                        pass
-                for transaction_id, product_id in selected_transaction_ids:
-                    self.transaction_items_manager.remove_transaction_item(
-                        transaction_id, product_id
+                    except tk.TclError as e:
+                        print(f"Error deleting item {item}: {e}")
+
+                # Initialize lists to track deletion results
+                deleted_items = [[], []]  # [successfully_deleted, failed_to_delete]
+
+                # Iterate over the selected transactions and attempt to remove them using the manager
+                for transaction_id_dict in selected_transaction_ids:
+                    if self.manager.remove_item(
+                        self.list_table_name, transaction_id_dict
+                    ):
+                        deleted_items[0].append(transaction_id_dict)
+                    else:
+                        deleted_items[1].append(transaction_id_dict)
+
+                # Display appropriate message based on deletion results
+                if deleted_items[0] and deleted_items[1]:
+                    messagebox.showinfo(
+                        "Success", f"Transactions {deleted_items[0]} Removed"
                     )
+                    messagebox.showerror(
+                        "Error", f"Transactions {deleted_items[1]} Cannot be Removed"
+                    )
+                elif deleted_items[0]:
+                    messagebox.showinfo(
+                        "Success", f"Transactions {deleted_items[0]} Removed"
+                    )
+                elif deleted_items[1]:
+                    messagebox.showerror(
+                        "Error", f"Transactions {deleted_items[1]} Cannot be Removed"
+                    )
+
+                # Check if all transactions have been removed
                 if not self.tree.get_children():
                     messagebox.showinfo(
                         "All Rows Deleted", "All transactions have been removed."
@@ -278,6 +403,11 @@ class transactionItemsManagementApp:
             messagebox.showinfo(
                 "Remove transaction", "Please select a transaction to remove."
             )
+
+    def destroy(self):
+        # Destroy all children of the master widget
+        for child in self.master.winfo_children():
+            child.destroy()
 
 
 class MultiColumnListbox(ttk.Treeview):
@@ -302,5 +432,5 @@ class MultiColumnListbox(ttk.Treeview):
 
 if __name__ == "__main__":
     root = Tk()
-    app = transactionItemsManagementApp(root)
+    app = transactionItemsManagementApp(root, root, "TransactionItems")
     root.mainloop()

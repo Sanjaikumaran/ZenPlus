@@ -1,11 +1,12 @@
 from tkinter import *
 import sqlite3
-from products_ui import ProductManagementApp
+
 import random
 from tkinter import ttk, messagebox, font as tkFont
-from transactions import sales_stats_management
-from customers import CustomerManagement
-from transactionItems import TransactionItemManagement
+
+# from transactions import sales_stats_management
+# from customers import CustomerManagement
+# from transactionItems import TransactionItemManagement
 
 
 import time
@@ -93,9 +94,9 @@ class BillBookApp:
         self.master.config(bg="#382D72")
         # self.master.attributes("-zoomed", True)
         self.data_frame = None
-        self.sales_manager = sales_stats_management()
-        self.customer_manager = CustomerManagement()
-        self.transaction_items_manager = TransactionItemManagement()
+        # self.sales_manager = sales_stats_management()
+        # self.customer_manager = CustomerManagement()
+        # self.transaction_items_manager = TransactionItemManagement()
 
         self.name = StringVar()
         self.ph_no = StringVar()
