@@ -143,12 +143,28 @@ class Operations:
 
             # Construct the SELECT query dynamically
             select_query = f"SELECT {columns} FROM {table_name} WHERE {where_clause}"
-
             # Prepare values for the query
             query_values = list(where_conditions.values())
 
             # Execute the SELECT query with the provided conditions on local database
             self.cursor_local.execute(select_query, query_values)
+            row = self.cursor_local.fetchall()
+            if row:
+                return row
+            else:
+                return False
+
+        except sqlite3.Error as err:
+            # Handle the error gracefully
+            print("Error:", err)
+
+    def get_last_row(self, table_name, column_name):
+        # Assuming the table has an auto-incrementing primary key 'id'
+        select_query = f"SELECT {column_name} FROM {table_name} ORDER BY {column_name} DESC LIMIT 1"
+
+        try:
+            # Execute the SELECT query to get the last item
+            self.cursor_local.execute(select_query)
             row = self.cursor_local.fetchone()
             if row:
                 return row

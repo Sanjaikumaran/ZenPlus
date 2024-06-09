@@ -7,7 +7,8 @@ from offlineDB import Operations
 import aiohttp
 from database import database
 import os
-
+import main
+import tkinter as tk
 import asyncio
 from log_in import Login
 from signUp import SignUp
@@ -16,18 +17,19 @@ from data_manager import DataManager
 
 class LoginSignUp:
     def __init__(self, root, callback=None):
-        self.root = root
-        self.callback = callback  # Assign the callback function
+        if root:
+            self.root = root
+            self.callback = callback  # Assign the callback function
 
-        (
-            self.root.success_remote,
-            self.root.cnx_remote,
-            self.root.cursor_remote,
-            self.root.error_remote,
-        ) = database.connect_to_remote_db()
-        self.login_window = Login(
-            self.root, self.on_signup
-        )  # Pass the callback function
+            (
+                self.root.success_remote,
+                self.root.cnx_remote,
+                self.root.cursor_remote,
+                self.root.error_remote,
+            ) = database.connect_to_remote_db()
+            self.login_window = Login(
+                self.root, self.on_signup
+            )  # Pass the callback function
 
     def on_signup(self, message):
         if message == "Success":
@@ -36,7 +38,7 @@ class LoginSignUp:
             self.start_event_loop(self.configure_data)
 
             # Open the main window
-            MainWindow(self.root)
+            MainWindow(self.root, self.configure_data[2])
         else:
             # Close the login window
             self.signup_window = SignUp(self.root, self.on_login)
@@ -44,6 +46,18 @@ class LoginSignUp:
     def on_login(self, message):
         # Reopen the login window
         self.login_window = Login(self.root, self.on_signup)
+
+    def decrypt_config(self):
+
+        with open("configure.enc", "rb") as f:
+            key = f.readline().strip()
+            cipher_suite = Fernet(key)
+            encrypted_data = f.read()
+            try:
+                decrypted_data = cipher_suite.decrypt(encrypted_data).decode()
+                return list(eval(decrypted_data))
+            except InvalidToken:
+                print("Invalid or corrupted encryption key or data.")
 
     def start_event_loop(self, configure_data):
         loop = asyncio.new_event_loop()
@@ -56,31 +70,24 @@ class LoginSignUp:
                 async with session.get("http://www.google.com", timeout=5) as response:
                     if response.status == 200:
                         print(configure_data[2])
+
                         Operations().main(configure_data[2])
         except (aiohttp.ClientError, asyncio.TimeoutError):
             pass  # Handle connection errors gracefully
 
-    def decrypt_config(self):
-        with open("configure.enc", "rb") as f:
-            key = f.readline().strip()
-            cipher_suite = Fernet(key)
-            encrypted_data = f.read()
-            try:
-                decrypted_data = cipher_suite.decrypt(encrypted_data).decode()
-                return list(eval(decrypted_data))
-            except InvalidToken:
-                print("Invalid or corrupted encryption key or data.")
-
 
 class MainWindow:
-    def __init__(self, root):
+    def __init__(self, root, shop_id):
         self.root = root
+        self.shop_id = shop_id
         self.root.title("Main Window")
 
         self.create_menu()
         self.main_frame = Frame(self.root)
-        self.main_frame.pack(fill=BOTH, expand=True)
-        self.bill_book_app = BillBookApp(self.main_frame, self.root)
+        # self.main_frame.pack(fill=BOTH, expand=True)
+        # self.main_frame.grid(row=0, column=0)
+        # self.main_frame.place(x=0, y=0)
+        self.bill_book_app = BillBookApp(self.main_frame, self.root, self.shop_id)
 
     def create_menu(self):
         menubar = Menu(self.root)
@@ -88,77 +95,46 @@ class MainWindow:
         self.root.config(bg="#382D72")
         self.root.attributes("-zoomed", True)
 
-        # Create File Menu
-        self.create_sub_menu(
-            menubar,
+        # Define the menu configurations
+        menu_configs = [
             "File",
-            [
-                ("New Window", self.new_window),
-                ("Sync to Local", self.sync_to_local),
-                ("Sync to Remote", self.sync_to_remote),
-                ("Exit", self.exit_app),
-            ],
-        )
-
-        # Create Product Menu
-        self.create_sub_menu(
-            menubar,
             "Product",
-            [
-                ("Find Product", lambda: self.find("Products")),
-                ("Add New Product", lambda: self.add("Products")),
-                ("Edit Product", lambda: self.edit("Products")),
-                ("Delete Product", lambda: self.delete("Products")),
-            ],
-        )
-
-        # Create Customer Menu
-        self.create_sub_menu(
-            menubar,
             "Customer",
-            [
-                ("Find Customer", lambda: self.find("Customers")),
-                ("Add Customer", lambda: self.add("Customers")),
-                ("Edit Customer", lambda: self.edit("Customers")),
-                ("Delete Customer", lambda: self.delete("Customers")),
-            ],
-        )
-
-        # Create Employee Menu
-        self.create_sub_menu(
-            menubar,
             "Employee",
-            [
-                ("Find Employee", lambda: self.find("Employees")),
-                ("Add Employee", lambda: self.add("Employees")),
-                ("Edit Employee", lambda: self.edit("Employees")),
-                ("Delete Employee", lambda: self.delete("Employees")),
-            ],
-        )
-
-        # Create Transactions Menu
-        self.create_sub_menu(
-            menubar,
             "Transactions",
-            [
-                ("Find Transaction", lambda: self.find("Transactions")),
-                ("Add Transaction", lambda: self.add("Transactions")),
-                ("Edit Transaction", lambda: self.edit("Transactions")),
-                ("Delete Transaction", lambda: self.delete("Transactions")),
-            ],
-        )
-
-        # Create Transaction Items Menu
-        self.create_sub_menu(
-            menubar,
             "Transaction Items",
-            [
-                ("Find Transaction Item", lambda: self.find("TransactionItems")),
-                ("Add Transaction Item", lambda: self.add("TransactionItems")),
-                ("Edit Transaction Item", lambda: self.edit("TransactionItems")),
-                ("Delete Transaction Item", lambda: self.delete("TransactionItems")),
-            ],
-        )
+        ]
+
+        # Define the common items for all menus except "File"
+        common_items = [
+            ("Find {item}", lambda item: lambda: self.action(item, "search_items")),
+            ("Add New {item}", lambda item: lambda: self.action(item, "add_new")),
+            ("Edit {item}", lambda item: lambda: self.action(item, "edit")),
+            ("Delete {item}", lambda item: lambda: self.action(item, "remove")),
+        ]
+
+        # Define the items specifically for the "File" menu
+        file_items = [
+            ("New Window", self.new_window),
+            ("Find Bill", self.find_bill),
+            ("Hold Bills", self.hold_bills),
+            ("Sync to Local", self.sync_to_local),
+            ("Sync to Remote", self.sync_to_remote),
+            ("Exit", self.exit_app),
+        ]
+
+        # Loop through the menu configurations to create submenus
+        for menu in menu_configs:
+            if menu == "File":
+                items = file_items
+            else:
+                entity = menu.replace(" ", "")  # Remove spaces for the function calls
+                items = [
+                    (name.format(item=entity), action(entity))
+                    for name, action in common_items
+                ]
+
+            self.create_sub_menu(menubar, menu, items)
 
     def create_sub_menu(self, parent_menu, label, commands):
         sub_menu = Menu(parent_menu, tearoff=0)
@@ -168,7 +144,25 @@ class MainWindow:
 
     def new_window(self):
         self.bill_book_app.destroy()
-        self.bill_book_app = BillBookApp(self.main_frame, self.root)
+        self.bill_book_app = BillBookApp(self.main_frame, self.root, self.shop_id)
+
+    def find_bill(self):
+        pass
+
+    def hold_bills(self):
+        def close_window():
+            self.hold_frame.destroy()
+
+        # Create hold_frame and place it
+        self.hold_frame = Frame(self.root)
+        self.hold_frame.place(x=0, y=0)
+
+        # Create close button and pack it in hold_frame
+        self.close_button = Button(self.hold_frame, text="Close", command=close_window)
+        self.close_button.pack()
+
+        # Initialize BillBookApp within hold_frame
+        self.bill_book_app = BillBookApp(self.hold_frame, self.root, self.shop_id)
 
     def sync_to_local(self):
         self.start_event_loop(self.configure_data)
@@ -179,32 +173,18 @@ class MainWindow:
     def exit_app(self):
         self.root.quit()
 
-    def find(self, page):
+    def action(self, page, action):
         self.bill_book_app.destroy()
-        self.bill_book_app = DataManager(self.main_frame, self.root, page)
-        self.bill_book_app.search_items()
-
-    def add(self, page):
-        self.bill_book_app.destroy()
-        self.bill_book_app = DataManager(self.main_frame, self.root, page)
-        self.bill_book_app.add_new()
-
-    def edit(self, page):
-        self.bill_book_app.destroy()
-        self.bill_book_app = DataManager(self.main_frame, self.root, page)
-        self.bill_book_app.edit()
-
-    def delete(self, page):
-        self.bill_book_app.destroy()
-        self.bill_book_app = DataManager(self.main_frame, self.root, page)
-        self.bill_book_app.remove()
+        self.bill_book_app = DataManager(self.main_frame, self.root, page, self.shop_id)
+        getattr(self.bill_book_app, action)()
 
 
 if __name__ == "__main__":
     root = Tk()
     if os.path.isfile("local_database.db"):
+        configure_data = LoginSignUp("").decrypt_config()
 
-        MainWindow(root)
+        MainWindow(root, configure_data[2])
     else:
 
         app = LoginSignUp(root)

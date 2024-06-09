@@ -70,6 +70,6 @@ def delete_duplicate_rows(table_name, unique_column):
 
 for _ in ["Products", "Customers", "Employees", "Transactions", "TransactionItems"]:
     # delete_duplicate_rows(_, "SNo")
-    if _ == "Products":
-        list_data_from_sqlite(_)
-        print("avlodha\n")
+    # if _ == "Transactions":
+    list_data_from_sqlite(_)
+    print("avlodha\n")

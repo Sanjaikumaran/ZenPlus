@@ -1,6 +1,7 @@
 from tkinter import *
 from tkinter import ttk, messagebox, font as tkFont
 from database import database
+import time
 import random
 from operations_access import DataManagement
 
@@ -9,20 +10,25 @@ from operations_access import DataManagement
 
 class DataManager:
 
-    def __init__(self, master, window, page):
+    def __init__(self, master, window, page, shop_id):
+
         self.master = master
         self.window = window
+        self.master.pack(fill=BOTH, expand=True)
+
+        self.shop_id = shop_id
         self.manager = DataManagement()
-        if page == "Products":
+        self.page = page
+        if page == "Product":
             self.window.title("Product Management")
             self.conditions_cols = '"SNo","Product ID"'
-            self.list_columns = "ProductName, ProductId, Brand, CostPrice, SellingPrice, MRP, Discount, CurrentStock, HistoryStock, SoldStock, GST"
+            self.list_columns = "ProductId, ProductName, Brand, CostPrice, SellingPrice, MRP, Discount, CurrentStock, HistoryStock, SoldStock, GST"
             self.list_table_name = "Products"
-            self.remove_cols = [2]
+            self.remove_cols = [1, 2]
             self.columns = (
                 "SNo",
-                "Product Name",
                 "Product ID",
+                "Product Name",
                 "Brand",
                 "Cost Price",
                 "Selling Price",
@@ -34,6 +40,7 @@ class DataManager:
                 "GST",
             )
         elif page == "TransactionItems":
+
             self.window.title("Transaction Items Management")
             self.conditions_cols = "SNo"
             self.remove_cols = [1, 2]
@@ -50,7 +57,8 @@ class DataManager:
                 "Taxes",
                 "Total",
             ]
-        elif page == "Customers":
+        elif page == "Customer":
+
             self.window.title("Customers Management")
             self.conditions_cols = '"SNo", "Customer ID", "Timestamp"'
             self.remove_cols = [1, 2]
@@ -69,11 +77,12 @@ class DataManager:
                 "City",
                 "Country",
             ]
-        elif page == "Employees":
-            self.window.title("Customers Management")
+        elif page == "Employee":
+
+            self.window.title("Employee Management")
             self.conditions_cols = '"SNo", "Customer ID", "Timestamp"'
-            self.remove_cols = [1, 2]
-            self.list_columns = "EmployeeID, ShopId, FirstName, LastName, Department, Position, Salary, HireDate"
+            self.remove_cols = [1, 2, 3]
+            self.list_columns = "EmployeeID, ShopId, FirstName, LastName, Department, Position, Salary, Timestamp"
             self.list_table_name = "Employees"
             self.columns = [
                 "SNo",
@@ -84,10 +93,11 @@ class DataManager:
                 "Department",
                 "Position",
                 "Salary",
-                "Hire Date",
+                "Timestamp",
             ]
         elif page == "Transactions":
-            self.window.title("Customers Management")
+
+            self.window.title("Transaction Management")
             self.conditions_cols = '"SNo", "Transaction ID", "Timestamp"'
             self.remove_cols = [1]
             self.list_columns = "TransactionID,Timestamp,Quantity,TotalPrice,CustomerID,PaymentMethod,Discount,Tax,NetSales,Profit,EmployeeID,LocationID"
@@ -115,6 +125,10 @@ class DataManager:
         self.master.bind("<Delete>", lambda event: self.remove())
         self.master.bind("<Alt-e>", lambda event: self.edit())
         self.master.bind("<Escape>", lambda event: self.close_windows_except_master)
+        current_time = time.time()
+        self.current_time = time.strftime(
+            "%Y-%m-%d %H:%M:%S", time.localtime(current_time)
+        )
 
     def close_windows_except_master(self):
         # Destroy all Toplevel windows except the master window
@@ -213,12 +227,16 @@ class DataManager:
 
     def add_new(self, event=None):
         self.add_window = Toplevel(self.master)
-        self.add_window.title("Add New Transaction")
+        self.add_window.title(f"Add New {self.page}")
         self.add_window.bind("<Control-s>", lambda event: self.save_new())
         self.add_window.bind("<Return>", lambda event: self.save_new())
 
         # Exclude trsave_new ID and Shop ID from the labels
-        self.labels = self.columns[1:]
+        if not self.page == "TransactionItems":
+            self.labels = self.columns[2:]
+        else:
+            self.labels = self.columns[2:]
+
         self.entries = []
 
         for i, label in enumerate(self.labels):
@@ -231,8 +249,11 @@ class DataManager:
         save_button.grid(row=len(self.labels) + 1, columnspan=2, padx=10, pady=10)
 
     def save_new(self):
+        unique_id = self.generate_id()
+
         # Get data from entry widgets and construct a dictionary
-        transaction_data = {}
+
+        transaction_data = {list(self.list_columns.split(","))[0]: unique_id}
         for label, entry in zip(self.labels, self.entries):
             # Remove spaces from column names
             column_name = label.replace(" ", "")
@@ -242,7 +263,9 @@ class DataManager:
 
         transaction_data["SNo"] = len(self.original_data) + 1
 
-        transaction_data["ShopID"] = "123"
+        transaction_data["ShopID"] = self.shop_id
+        if not self.page == "TransactionItems":
+            transaction_data["Timestamp"] = self.current_time
 
         # Assuming manager has a method for adding new transactions
         if self.manager.add_item(self.list_table_name, transaction_data):
@@ -253,23 +276,23 @@ class DataManager:
             for i, row in enumerate(self.original_data, start=1):
                 self.tree.insert("", "end", values=(i,) + row)
             self.add_window.destroy()
-            messagebox.showinfo("Success", "Transaction Added")
+            messagebox.showinfo("Success", f"{self.page} Added")
         else:
             self.add_window.destroy()
-            messagebox.showerror("Error", "Transaction cannot be added.")
+            messagebox.showerror("Error", f"{self.page} cannot be added.")
 
     def edit(self, event=None):
         selected_items = self.tree.selection()
         if len(selected_items) != 1:
             messagebox.showinfo(
-                "Edit transaction", "Please select exactly one transaction to edit."
+                f"Edit {self.page}", f"Please select exactly one {self.page} to edit."
             )
             return
         selected_item = selected_items[0]
         if selected_item:
             selected_item_values = self.tree.item(selected_item, "values")
             self.edit_window = Toplevel(self.master)
-            self.edit_window.title("Edit transaction")
+            self.edit_window.title(f"Edit {self.page}")
             self.edit_window.bind(
                 "<Control-s>", lambda event: self.save_changes(selected_item)
             )
@@ -301,7 +324,7 @@ class DataManager:
             save_button.grid(row=len(self.columns), columnspan=2, padx=10, pady=10)
         else:
             messagebox.showinfo(
-                "Edit transaction", "Please select a transaction to edit."
+                f"Edit {self.page}", f"Please select a {self.page} to edit."
             )
 
     def save_changes(self, selected_item):
@@ -320,7 +343,7 @@ class DataManager:
                 continue
             else:
                 updated_values[self.columns[i]] = entry.get()
-        shop_id = "123"
+
         modified_values = {}
         for key, value in updated_values.items():
             modified_values[key.replace(" ", "")] = value
@@ -331,9 +354,9 @@ class DataManager:
         if self.manager.update_item(
             self.list_table_name, default_values, modified_values
         ):
-            messagebox.showinfo("Success", "Transaction Updated")
+            messagebox.showinfo("Success", f"{self.page} Updated")
         else:
-            messagebox.showerror("Error", "Transaction Cannot be Updated")
+            messagebox.showerror("Error", f"{self.page} cannot be Updated")
 
     def remove(self, event=None):
         selected_items = self.tree.selection()
@@ -350,10 +373,11 @@ class DataManager:
 
             # Create confirmation message
             confirmation_message = (
-                "Are you sure you want to remove the following transactions?\n\n"
+                f"Are you sure you want to remove the following {self.page}?\n\n"
             )
             confirmation_message += "\n".join(
-                str(transaction_id) for transaction_id in selected_transaction_ids
+                ",".join(map(str, transaction_id.values()))
+                for transaction_id in selected_transaction_ids
             )
 
             # Confirm removal with user
@@ -373,36 +397,66 @@ class DataManager:
                     if self.manager.remove_item(
                         self.list_table_name, transaction_id_dict
                     ):
-                        deleted_items[0].append(transaction_id_dict)
+                        deleted_items[0].append(
+                            ",".join(map(str, transaction_id_dict.values()))
+                        )
                     else:
-                        deleted_items[1].append(transaction_id_dict)
+                        deleted_items[1].append(
+                            ",".join(map(str, transaction_id_dict.values()))
+                        )
 
                 # Display appropriate message based on deletion results
                 if deleted_items[0] and deleted_items[1]:
                     messagebox.showinfo(
-                        "Success", f"Transactions {deleted_items[0]} Removed"
+                        "Success",
+                        f"{self.page} { ','.join(map(str, deleted_items[0]))} Removed",
                     )
                     messagebox.showerror(
-                        "Error", f"Transactions {deleted_items[1]} Cannot be Removed"
+                        "Error",
+                        f"{self.page} {','.join(map(str, deleted_items[1]))} Cannot be Removed",
                     )
                 elif deleted_items[0]:
                     messagebox.showinfo(
-                        "Success", f"Transactions {deleted_items[0]} Removed"
+                        "Success",
+                        f"{self.page} {','.join(map(str, deleted_items[0]))} Removed",
                     )
                 elif deleted_items[1]:
                     messagebox.showerror(
-                        "Error", f"Transactions {deleted_items[1]} Cannot be Removed"
+                        "Error",
+                        f"{self.page} {','.join(map(str, deleted_items[1]))} Cannot be Removed",
                     )
 
-                # Check if all transactions have been removed
+                # Check if all {self.page} have been removed
                 if not self.tree.get_children():
                     messagebox.showinfo(
-                        "All Rows Deleted", "All transactions have been removed."
+                        "All Rows Deleted", f"All {self.page} have been removed."
                     )
         else:
             messagebox.showinfo(
-                "Remove transaction", "Please select a transaction to remove."
+                f"Remove {self.page}", f"Please select a {self.page} to remove."
             )
+
+    def generate_id(self):
+        if self.page == "Customer":
+            return self.entries[4].get()
+        else:
+            last_id = self.manager.get_last_item(
+                self.list_table_name, list(self.list_columns.split(","))[0]
+            )
+
+            if self.page == "Transactions":
+                id_type = "TRN"
+            elif self.page == "Product":
+                id_type = "PRD"
+            elif self.page == "Employee":
+                id_type = "EMP"
+            else:
+                return str(
+                    self.manager.get_last_item(
+                        "Transactions", list(self.list_columns.split(","))[0]
+                    )[0]
+                )
+            return id_type + str(int(last_id[0][3:]) + 1)
 
     def destroy(self):
         # Destroy all children of the master widget

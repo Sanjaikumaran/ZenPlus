@@ -12,9 +12,9 @@ class DataManagement:
             "%Y-%m-%d %H:%M:%S", time.localtime(current_time)
         )
 
-    def list_items(self, table, columns):
+    def list_items(self, table_name, columns):
 
-        return self.ops.list_table(table, columns)
+        return self.ops.list_table(table_name, columns)
 
     def add_item(self, table_name, item_data):
 
@@ -37,10 +37,13 @@ class DataManagement:
         else:
             return False
 
-    def get_transaction_item(self, transaction_id, product_id):
+    def get_last_item(self, table_name, column_name):
 
-        columns = "*"
+        return self.ops.get_last_row(table_name, column_name)
 
-        where_conditions = {"TransactionID": transaction_id, "ProductID": product_id}
-
-        return self.ops.select_row("TransactionItems", columns, where_conditions)
+    def get_item(self, table_name, column_names, where_conditions):
+        result = self.ops.select_row(table_name, column_names, where_conditions)
+        if result:
+            return result
+        else:
+            return False
