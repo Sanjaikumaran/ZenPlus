@@ -120,21 +120,14 @@ class DataManager:
 
         self.create_search_frame()
         self.create_table_frame()
-        self.master.bind("<Alt-s>", lambda event: self.search_entry.focus())
-        self.master.bind("<Alt-n>", lambda event: self.add_new())
-        self.master.bind("<Delete>", lambda event: self.remove())
-        self.master.bind("<Alt-e>", lambda event: self.edit())
-        self.master.bind("<Escape>", lambda event: self.close_windows_except_master)
+        self.window.bind("<Alt-s>", lambda event: self.search_entry.focus())
+        self.window.bind("<Alt-n>", lambda event: self.add_new())
+        self.window.bind("<Delete>", lambda event: self.remove())
+        self.window.bind("<Alt-e>", lambda event: self.edit())
         current_time = time.time()
         self.current_time = time.strftime(
             "%Y-%m-%d %H:%M:%S", time.localtime(current_time)
         )
-
-    def close_windows_except_master(self):
-        # Destroy all Toplevel windows except the master window
-        for window in self.master.winfo_children():
-            if isinstance(window, Toplevel):
-                window.destroy()
 
     def create_search_frame(self):
         self.search_frame = Frame(self.master, bg="#382D72")
@@ -230,6 +223,7 @@ class DataManager:
         self.add_window.title(f"Add New {self.page}")
         self.add_window.bind("<Control-s>", lambda event: self.save_new())
         self.add_window.bind("<Return>", lambda event: self.save_new())
+        self.add_window.bind("<Escape>", lambda event: self.add_window.destroy())
 
         # Exclude trsave_new ID and Shop ID from the labels
         if not self.page == "TransactionItems":
@@ -299,6 +293,7 @@ class DataManager:
             self.edit_window.bind(
                 "<Return>", lambda event: self.save_changes(selected_item)
             )
+            self.edit_window.bind("<Escape>", lambda event: self.edit_window.destroy())
 
             self.edit_window_entries = []
             for i, column in enumerate(self.columns):

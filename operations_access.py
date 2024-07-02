@@ -47,3 +47,11 @@ class DataManagement:
             return result
         else:
             return False
+
+    def get_holded_items(self, table_name, column_names, where_conditions):
+        result = self.ops.select_row(table_name, column_names, where_conditions)
+        if result:
+            return result
+
+        else:
+            return False

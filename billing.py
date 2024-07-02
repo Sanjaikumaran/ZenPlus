@@ -87,17 +87,19 @@ class BillBookApp:
         "Country",
     ]
 
-    def __init__(self, master, window, shop_id):
+    def __init__(self, master, window, shop_id, window_type=None):
         self.shop_id = shop_id
         self.master = master
         self.master.place(x=0, y=0)
         self.window = window
+        self.window_type = window_type
         self.manager = DataManagement()
         self.window.title("Bill Book")
         self.master.config(bg="#382D72")
         # self.master.attributes("-zoomed", True)
         self.data_frame = None
-
+        self.customer_data = self.default_transaction_id = False
+        self.default_transaction = [["", False]]
         self.name = StringVar()
         self.ph_no = StringVar()
         self.bill_no = StringVar()
@@ -109,6 +111,7 @@ class BillBookApp:
         self.Amount = StringVar()
         self.Price = StringVar()
         self.product_id_var = None
+        self.exist = True
 
         self.cart_items = []
 
@@ -167,13 +170,17 @@ class BillBookApp:
             bill_no_frame, font=("calibri", 15), width=25, textvariable=self.bill_no
         )
         self.bill_entry.pack(side=RIGHT, padx=5)
+        if self.window_type == "Hold Window":
+            holded_data = self.manager.get_holded_items(
+                "Transactions", "TransactionID", {"TransactionID": ("LIKE", " 'H-%'")}
+            )
+            print(holded_data)
+            self.bill_no.set(holded_data[-1][0])
 
-        # Bind the <FocusIn> event to the entry widget
-        # self.bill_entry.bind("<FocusIn>", self.on_focus)
-
-        transaction_id = self.manager.get_last_item("Transactions", "TransactionID")
-        self.transaction_id = "TRN" + str(int(transaction_id[0][3:]) + 1)
-        self.bill_no.set(self.transaction_id)
+        else:
+            transaction_id = self.manager.get_last_item("Transactions", "TransactionID")
+            self.transaction_id = "TRN" + str(int(transaction_id[0][3:]) + 1)
+            self.bill_no.set(self.transaction_id)
 
         # Add a label for the clock
         self.clock_label = Label(
@@ -185,10 +192,13 @@ class BillBookApp:
         self.update_clock()
 
     def update_clock(self):
-        current_datetime = time.strftime("%Y-%m-%d %H:%M:%S")
-        self.clock_label.config(text=current_datetime)
-        # Update every second (1000 milliseconds)
-        self.master.after(1000, self.update_clock)
+        try:
+            current_datetime = time.strftime("%Y-%m-%d %H:%M:%S")
+            self.clock_label.config(text=current_datetime)
+            # Update every second (1000 milliseconds)
+            self.master.after(1000, self.update_clock)
+        except:
+            pass
 
     def clear_cart(self):
         # Clear the cart items list
@@ -252,7 +262,7 @@ class BillBookApp:
             widget.destroy()
 
         # Redisplay the items
-        column_widths = [5, 15, 30, 12, 12, 12, 13, 13, 13, 10]
+        column_widths = [5, 15, 24, 12, 12, 12, 13, 13, 13, 10]
         for i, item in enumerate(self.cart_items, start=2):
             for j, value in enumerate(item):
                 label = Label(
@@ -269,6 +279,7 @@ class BillBookApp:
                 font=("calibri", 12),
                 bg="#FF5733",
                 fg="white",
+                width=column_widths[-1],
                 command=lambda idx=i - 2: self.remove_from_cart(idx),
             )
             remove_button.grid(
@@ -407,12 +418,16 @@ class BillBookApp:
 
         self.cart_frame.configure(height=565)
         self.cart_canvas.configure(height=565)
+        if self.window_type == "Hold Window":
+            self.on_enter_pressed("Hold")
 
     def add_to_cart(self, item=False):
         if item:
 
             self.product_id_var = item[3]
-            product_name = "i"
+            product_name = self.manager.get_item(
+                "Products", "ProDuctName", {"ProductID": self.product_id_var}
+            )[0][0]
             quantity = item[4]
             price = item[5]
             discount = item[6]
@@ -504,15 +519,37 @@ class BillBookApp:
             )  # Place the button in the last column
 
     def on_enter_pressed(self, event):
-        if self.window.focus_get() == self.bill_entry:
+        if self.window.focus_get() == self.bill_entry or event == "Hold":
             # If bill_entry is focused
-            transaction_items = self.manager.get_item(
-                "TransactionItems", "*", {"TransactionID": self.bill_no.get()}
+            self.default_transaction_id = self.bill_no.get()
+            self.default_transaction = self.manager.get_item(
+                "Transactions",
+                "CustomerID, PaymentMethod",
+                {"TransactionID": self.default_transaction_id},
             )
-            if transaction_items:
-                self.cart_items.clear()
-                for item in transaction_items:
-                    self.add_to_cart(item)
+
+            if self.default_transaction:
+                transaction_items = self.manager.get_item(
+                    "TransactionItems",
+                    "*",
+                    {"TransactionID": self.default_transaction_id},
+                )
+
+                self.customer_data = self.manager.get_item(
+                    "Customers", "*", {"CustomerID": self.default_transaction[0][0]}
+                )
+
+                if transaction_items:
+                    self.cart_items.clear()
+                    for item in transaction_items:
+                        self.add_to_cart(item)
+                else:
+                    self.cart_items.clear()  # Clear the cart if no transaction items found
+            else:
+                self.cart_items.clear()  # Clear the cart if transaction not found
+                self.customer_data.clear()
+                self.default_transaction.clear()
+                self.clear_cart()  # Optionally, add a default/empty item if needed
         else:
             # If bill_entry is not focused
             self.add_to_cart()
@@ -628,6 +665,7 @@ class BillBookApp:
         self.transaction_id = "H-" + self.transaction_id
 
         self.return_value = True
+        self.holded = True
         self.print_transaction()
 
     def add_new_customer(self, event=None):
@@ -635,28 +673,50 @@ class BillBookApp:
         self.add_window.title("Customer Details")
         self.add_window.bind("<Control-s>", lambda event: self.save_new_customer())
         self.add_window.bind("<Return>", lambda event: self.save_new_customer())
+        self.add_window.bind("<Escape>", lambda event: self.add_window.destroy())
 
-        # Exclude trsave_new_customer ID and Shop ID from the labels
+        # Exclude 'Customer ID' and 'Shop ID' from the labels
         self.labels = self.columns[2:]
         self.entries = []
 
-        for i, label in enumerate(self.labels):
+        if self.customer_data and self.default_transaction[0][1] != "In Hold":
+
+            customer_values = self.customer_data[0][4:]
+
+        else:
+
+            customer_values = [""] * len(
+                self.labels
+            )  # empty values if no customer data
+
+        for i, (label, value) in enumerate(zip(self.labels, customer_values)):
             Label(self.add_window, text=label).grid(row=i, column=0, padx=10, pady=5)
             entry = Entry(self.add_window)
             entry.grid(row=i, column=1, padx=10, pady=5)
             self.entries.append(entry)
+            entry.insert(0, value)  # populate entry with existing customer value
+
         options = ["Cash", "Card", "UPI"]
         Label(self.add_window, text="Payment Method").grid(
             row=i + 1, column=0, padx=10, pady=5
         )
+        # Add payment method dropdown
+        index = 0
+        if (
+            self.default_transaction[0][1]
+            and self.default_transaction[0][1] != "In Hold"
+        ):
+            index = options.index(self.default_transaction[0][1])
+
         # Create a variable to store the selected option
         self.selected_option = StringVar(self.add_window)
-        self.selected_option.set(options[0])  # Set the default selected option
+        self.selected_option.set(options[index])  # Set the default selected option
 
         # Create the dropdown menu
         self.dropdown = OptionMenu(self.add_window, self.selected_option, *options)
         self.dropdown.grid(row=i + 1, column=1, padx=10, pady=5)
 
+        # Save button
         save_button = Button(
             self.add_window, text="Save", command=self.save_new_customer
         )
@@ -677,7 +737,17 @@ class BillBookApp:
         # self.original_data = self.customer_manager.list_customers()
 
         # Assuming customer_manager has a method for adding new customers
-        if self.manager.add_item("Customers", self.customer_data):
+        if self.default_transaction_id and self.default_transaction[0][1] != "In Hold":
+            if self.manager.update_item(
+                "Customers",
+                {"CustomerID": self.default_transaction[0][0]},
+                self.customer_data,
+            ):
+                self.add_window.destroy()
+                self.return_value = True
+                self.print_transaction()
+
+        elif self.manager.add_item("Customers", self.customer_data):
 
             # self.original_data = self.manager.list_c()
 
@@ -730,7 +800,7 @@ class BillBookApp:
                     amount,
                     tax,
                     total,
-                ) = cart_item
+                ) = cart_item[1:]
 
                 # Increment total quantity and total discount
                 total_quantity += int(quantity)
@@ -738,7 +808,7 @@ class BillBookApp:
 
                 # Prepare transaction item data
                 transaction_item_data = {
-                    "TransactionID": str(self.transaction_id),
+                    "TransactionID": self.transaction_id,
                     "ShopId": self.shop_id,  # Assuming ShopID is hardcoded
                     "ProductID": product_id,  # Assuming ProductID is hardcoded or retrieved from the database
                     "Quantity": int(quantity),
@@ -754,7 +824,17 @@ class BillBookApp:
                 transaction_item_list.append(transaction_item_data)
             items_added = 0
             # Assuming there's a method to insert transaction items into the database
+            if self.default_transaction_id:
+
+                self.manager.remove_item(
+                    "TransactionItems",
+                    {"TransactionID": self.default_transaction_id},
+                )
+                for transaction_item_data in transaction_item_list:
+                    print("Df")
+                    transaction_item_data["TransactionID"] = self.default_transaction_id
             for transaction_item_data in transaction_item_list:
+                print(transaction_item_data)
                 if self.manager.add_item("TransactionItems", transaction_item_data):
                     items_added += 1
                     continue  # Successfully added transaction item
@@ -782,15 +862,32 @@ class BillBookApp:
                     # Include other transaction details as needed
                 }
                 # Assuming sales_manager has a method for adding new transactions
-                if self.manager.add_item("Transactions", transaction_data):
+                if self.default_transaction_id:
+                    transaction_data["TransactionID"] = self.default_transaction_id
+                    if self.manager.update_item(
+                        "Transactions",
+                        {"TransactionID": self.default_transaction_id},
+                        transaction_data,
+                    ):
+                        messagebox.showinfo("Success", "Printed")
+                        self.clear_cart()
+                        self.transaction_id = "TRN" + str(
+                            int(self.default_transaction_id[3:]) + 1
+                        )
+                        self.bill_no.set(self.transaction_id)
+
+                elif self.manager.add_item("Transactions", transaction_data):
                     # Update GUI or perform other actions upon successful addition
                     messagebox.showinfo("Success", "Printed")
                     self.clear_cart()
-                    self.transaction_id = "TRN" + str(int(self.transaction_id[3:]) + 1)
-                    self.bill_no.set(self.transaction_id)
-            else:
-                # Handle failure to add transaction
-                messagebox.showerror("Error", "Cannot Print")
+                    if not self.holded:
+                        self.transaction_id = "TRN" + str(
+                            int(self.transaction_id[3:]) + 1
+                        )
+                        self.bill_no.set(self.transaction_id)
+                else:
+                    # Handle failure to add transaction
+                    messagebox.showerror("Error", "Cannot Print")
 
         else:
             # Handle failure to add transaction items
@@ -843,6 +940,11 @@ class BillBookApp:
         # Destroy all children of the master widget
         for child in self.master.winfo_children():
             child.destroy()
+        self.exist = False
+
+    def exist(self):
+
+        return self.exist
 
 
 if __name__ == "__main__":

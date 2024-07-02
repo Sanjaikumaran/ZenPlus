@@ -143,14 +143,28 @@ class MainWindow:
         parent_menu.add_cascade(label=label, menu=sub_menu)
 
     def new_window(self):
-        self.bill_book_app.destroy()
-        self.bill_book_app = BillBookApp(self.main_frame, self.root, self.shop_id)
+        try:
+            self.data_manager_app.destroy()
+            self.bill_book_app.destroy()
+            self.hold_frame.destroy()
+        except:
+            pass
+        finally:
+            self.bill_book_app = BillBookApp(self.main_frame, self.root, self.shop_id)
 
     def find_bill(self):
         pass
 
     def hold_bills(self):
+        try:
+            print(self.bill_book_app.exist())
+            # self.hold_book_app.destroy()
+            self.data_manager_app.destroy()
+        except:
+            pass
+
         def close_window():
+
             self.hold_frame.destroy()
 
         # Create hold_frame and place it
@@ -162,7 +176,9 @@ class MainWindow:
         self.close_button.pack()
 
         # Initialize BillBookApp within hold_frame
-        self.bill_book_app = BillBookApp(self.hold_frame, self.root, self.shop_id)
+        self.hold_book_app = BillBookApp(
+            self.hold_frame, self.root, self.shop_id, "Hold Window"
+        )
 
     def sync_to_local(self):
         self.start_event_loop(self.configure_data)
@@ -174,9 +190,17 @@ class MainWindow:
         self.root.quit()
 
     def action(self, page, action):
-        self.bill_book_app.destroy()
-        self.bill_book_app = DataManager(self.main_frame, self.root, page, self.shop_id)
-        getattr(self.bill_book_app, action)()
+        try:
+            self.bill_book_app.destroy()
+            self.hold_frame.destroy()
+            self.data_manager_app.destroy()
+        except:
+            pass
+        finally:
+            self.data_manager_app = DataManager(
+                self.main_frame, self.root, page, self.shop_id
+            )
+            getattr(self.data_manager_app, action)()
 
 
 if __name__ == "__main__":

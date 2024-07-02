@@ -138,13 +138,27 @@ class Operations:
         try:
             # Construct the WHERE clause dynamically
             where_clause = " AND ".join(
-                [f"{column} = ?" for column in where_conditions.keys()]
+                [
+                    (
+                        f"{column} {operator[0]} {operator[1]}"
+                        if operator[0].upper() == "LIKE"
+                        else f"{column} = ?"
+                    )
+                    for column, operator in where_conditions.items()
+                ]
             )
 
             # Construct the SELECT query dynamically
             select_query = f"SELECT {columns} FROM {table_name} WHERE {where_clause}"
             # Prepare values for the query
             query_values = list(where_conditions.values())
+            query_values = [
+                val if isinstance(val, str) and val.upper().startswith("LIKE") else val
+                for val in query_values
+            ]
+
+            if "LIKE" in select_query:
+                query_values = ""
 
             # Execute the SELECT query with the provided conditions on local database
             self.cursor_local.execute(select_query, query_values)
